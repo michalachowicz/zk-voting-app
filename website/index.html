@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="eng">
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 </head>
@@ -9,22 +9,7 @@
     <button id="connectButton">Connect Wallet</button>
     <div id="output"></div>
 
-    <script>
-        const connectButton = document.getElementById('connectButton');
-        const output = document.getElementById('output');
-
-        connectButton.addEventListener('click', async () => {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            const signer = await provider.getSigner();
-            const address = await signer.getAddress();
-            output.innerText = address;
-
-            const blockNumber = await provider.getBlockNumber();
-
-            output.innerText = `Adres: ${address}\nAktualny Blok: ${blockNumber}`;
-        });
-    </script>
+    <script src="logic.js"></script>
 
 </body>
 

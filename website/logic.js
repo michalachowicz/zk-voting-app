@@ -1,6 +1,11 @@
 const connectButton = document.getElementById('connectButton');
 const getRoundsButton = document.getElementById('getRoundsButton');
 const output = document.getElementById('output');
+const startTime = document.getElementById('startTime')
+const commitEndTime = document.getElementById('commitEndTime')
+const revealEndTime = document.getElementById('revealEndTime')
+const merkleRoot = document.getElementById('merkleRoot')
+const options = document.getElementById('options')
 
 let provider, signer, contract, userSecret;
 
@@ -61,5 +66,17 @@ async function getRounds() {
     }
 }
 
+async function addRound() {
+    const options_hex = options.value.split(',').map(item => ethers.utils.formatBytes32String(item.trim()));
+    await contract.functions.addRound(startTime.value, commitEndTime.value, revealEndTime.value, merkleRoot.value, options_hex);
+    startTime.value = '';
+    commitEndTime.value = '';
+    revealEndTime.value = '';
+    merkleRoot.value = '';
+    options.value = '';
+    console.log('Round added')
+}
+
 connectButton.addEventListener('click', logIn);
 getRoundsButton.addEventListener('click', getRounds);
+addRoundButton.addEventListener('click', addRound);

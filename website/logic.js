@@ -39,6 +39,20 @@ async function logIn() {
     output.innerText = `Address: ${address}\nCurrent block number: ${blockNumber}`;
 }
 
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp.toNumber() * 1000);
+
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+
+    return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+}
+
 async function getRounds() {
     const roundsCount = await contract.roundsCount();
     console.log(roundsCount);
@@ -47,16 +61,24 @@ async function getRounds() {
 
     for (let i=0; i < roundsCount; i++) {
         let roundDetails = await contract.roundDetails(i);
-        let options = await contract.getOptions(i);
         console.log(roundDetails);
+        let optionsRaw = await contract.getOptions(i);
+        let options = optionsRaw.map(item => {
+            try {
+                return ethers.utils.parseBytes32String(item);
+            } catch (error) {
+                return item;
+            }
+        });
+
 
         const html = `
                 <fieldset>
                     <legend><strong>Round #${i}</strong></legend>
                     
-                    Start: ${roundDetails.startTime}<br>
-                    Commit End: ${roundDetails.commitmentEndTime}<br>
-                    Reveal End: ${roundDetails.revealEndTime}<br>
+                    Start: ${formatTimestamp(roundDetails.startTime)}<br>
+                    Commit End: ${formatTimestamp(roundDetails.commitmentEndTime)}<br>
+                    Reveal End: ${formatTimestamp(roundDetails.revealEndTime)}<br>
                     Root: ${roundDetails.merkleRoot}<br>
                     Options: ${options}
                 </fieldset>

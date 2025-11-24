@@ -1,11 +1,15 @@
 const connectButton = document.getElementById('connectButton');
 const getRoundsButton = document.getElementById('getRoundsButton');
 const output = document.getElementById('output');
-const startTime = document.getElementById('startTime')
-const commitEndTime = document.getElementById('commitEndTime')
-const revealEndTime = document.getElementById('revealEndTime')
-const merkleRoot = document.getElementById('merkleRoot')
-const options = document.getElementById('options')
+const roundsContainer = document.getElementById('roundsContainer');
+const startTime = document.getElementById('startTime');
+const commitEndTime = document.getElementById('commitEndTime');
+const revealEndTime = document.getElementById('revealEndTime');
+const merkleRoot = document.getElementById('merkleRoot');
+const options = document.getElementById('options');
+const addRoundButton = document.getElementById('addRoundButton');
+const findPathButton = document.getElementById('findPathButton');
+const choosedOption = document.getElementById('choosedOption');
 
 let provider, signer, contract, userSecret;
 
@@ -99,6 +103,39 @@ async function addRound() {
     console.log('Round added')
 }
 
+async function findMerklePath() {
+    const response = await fetch('merkle_tree.txt');
+
+    if (!response.ok) {
+        throw new Error("No file with Merkle Tree found!");
+    }
+
+    // 2. Odczytujemy jako tekst
+    const text = await response.text();
+    const merkleTree = text.split('\n');
+    console.log(merkleTree);
+    const indentifierIndex = merkleTree.findIndex(value => value === userSecret);
+    console.log(indentifierIndex);
+    let path = [];
+    let sides = [];
+    let currentIndex = indentifierIndex;
+    while (currentIndex > 0) {
+        if (currentIndex % 2 === 0) {
+            path.push(merkleTree[currentIndex - 1]);
+            sides.push(1);
+        }
+        else {
+            path.push(merkleTree[currentIndex + 1]);
+            sides.push(0);
+        }
+        currentIndex = Math.floor((currentIndex - 1) / 2);
+    }
+    console.log(path);
+    console.log(sides);
+    return path, sides;
+}
+
 connectButton.addEventListener('click', logIn);
 getRoundsButton.addEventListener('click', getRounds);
 addRoundButton.addEventListener('click', addRound);
+findPathButton.addEventListener('click', findMerklePath);

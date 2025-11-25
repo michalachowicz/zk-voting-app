@@ -2,6 +2,12 @@
 <html lang="eng">
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/snarkjs@0.7.5/build/snarkjs.min.js"></script>
+    <script type="module">
+        import { buildPoseidon } from 'https://esm.sh/circomlibjs@0.1.7';
+
+        window.poseidon = await buildPoseidon();
+    </script>
 </head>
 
 <body>
@@ -16,7 +22,6 @@
     <input type="text" id="commitEndTime" placeholder="commit end time">
     <input type="text" id="revealEndTime" placeholder="reveal end time">
     <input type="text" id="merkleRoot" placeholder="merkle root">
-    <input type="text" id="options" placeholder="options">
     <input type="text" id="options" placeholder="options">
     <input type="text" id="choosedOption" placeholder="Choosed option">
 

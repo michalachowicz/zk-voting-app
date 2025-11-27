@@ -1,16 +1,7 @@
 const connectButton = document.getElementById('connectButton');
-const getRoundsButton = document.getElementById('getRoundsButton');
 const output = document.getElementById('output');
+const addRoundContainer = document.getElementById('addRoundContainer');
 const roundsContainer = document.getElementById('roundsContainer');
-const startTime = document.getElementById('startTime');
-const commitEndTime = document.getElementById('commitEndTime');
-const revealEndTime = document.getElementById('revealEndTime');
-const merkleRoot = document.getElementById('merkleRoot');
-const options = document.getElementById('options');
-const addRoundButton = document.getElementById('addRoundButton');
-const findPathButton = document.getElementById('findPathButton');
-const choosedOption = document.getElementById('choosedOption');
-const commitButton = document.getElementById('commitButton')
 
 let provider, signer, contract, userSecret, userId;
 
@@ -44,9 +35,27 @@ async function logIn() {
     console.log(owner);
 
     const address = await signer.getAddress();
-    output.innerText = address;
-    const blockNumber = await provider.getBlockNumber();
-    output.innerText = `Address: ${address}\nCurrent block number: ${blockNumber}`;
+    output.innerText = `Address: ${address}`;
+    if (address == owner) {
+        generateAddRoundBox();
+    }
+    await getRounds();
+}
+
+function generateAddRoundBox() {
+    const html = `
+    <fieldset class="add-round-box">
+        <legend><strong>Add Round</strong></legend>
+        <input type="text" id="startTime" placeholder="start time">
+        <input type="text" id="commitEndTime" placeholder="commit end time">
+        <input type="text" id="revealEndTime" placeholder="reveal end time"><br>
+        <input type="text" id="merkleRoot" placeholder="merkle root"><br>
+        <input type="text" id="options" placeholder="options"><br>
+        <button id="addRoundButton"> Add Round </button>
+    </fieldset>`
+
+    addRoundContainer.insertAdjacentHTML("afterbegin", html);
+    addRoundButton.addEventListener('click', addRound);
 }
 
 function formatTimestamp(timestamp) {
@@ -83,14 +92,17 @@ async function getRounds() {
 
 
         const html = `
-                <fieldset>
+                <fieldset class="round-box" data-round-id=${i}>
                     <legend><strong>Round #${i}</strong></legend>
                     
                     Start: ${formatTimestamp(roundDetails.startTime)}<br>
                     Commit End: ${formatTimestamp(roundDetails.commitmentEndTime)}<br>
                     Reveal End: ${formatTimestamp(roundDetails.revealEndTime)}<br>
                     Root: ${roundDetails.merkleRoot}<br>
-                    Options: ${options}
+                    Options: ${options}<br>
+                    <input type="text" id="vote-input-${i}" placeholder="Type your choosed option"><br>
+                    <button onclick="commit(${i})"> Commit </button>
+                    <button onclick="reveal(${i})"> Reveal </button>
                 </fieldset>
                 <br> `;
 
@@ -99,6 +111,12 @@ async function getRounds() {
 }
 
 async function addRound() {
+    const startTime = document.getElementById('startTime');
+    const commitEndTime = document.getElementById('commitEndTime');
+    const revealEndTime = document.getElementById('revealEndTime');
+    const merkleRoot = document.getElementById('merkleRoot');
+    const options = document.getElementById('options');
+    
     const options_hex = options.value.split(',').map(item => ethers.utils.formatBytes32String(item.trim()));
     await contract.functions.addRound(startTime.value, commitEndTime.value, revealEndTime.value, merkleRoot.value, options_hex);
     startTime.value = '';
@@ -138,9 +156,9 @@ async function findMerklePath() {
     return { path, sides };
 }
 
-async function commit() {
-    const roundId = await contract.roundsCount() - 1;
-    const option = ethers.utils.formatBytes32String("tak");
+async function commit(roundId) {
+    const optionText = document.getElementById(`vote-input-${roundId}`).value.trim();
+    const option = ethers.utils.formatBytes32String(optionText);
     let nullifier = window.poseidon([userSecret, roundId]);
     nullifier = window.poseidon.F.toObject(nullifier);
     nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
@@ -181,11 +199,19 @@ async function commit() {
     const pC = proof.pi_c.slice(0, 2);
 
     console.log("nullifier: ", nullifier);
-    contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, roundId.toString(), nonce.toString());
+    await contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, roundId.toString(), nonce.toString());
+}
+
+async function reveal(roundId) {
+    const optionText = document.getElementById(`vote-input-${roundId}`).value.trim();
+    const option = ethers.utils.formatBytes32String(optionText);
+    let nullifier = window.poseidon([userSecret, roundId]);
+    nullifier = window.poseidon.F.toObject(nullifier);
+    nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
+    const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
+    const hashedSalt = ethers.utils.keccak256(salt);
+    await contract.functions.reveal(option, nullifier, roundId, hashedSalt);
 }
 
 connectButton.addEventListener('click', logIn);
-getRoundsButton.addEventListener('click', getRounds);
-addRoundButton.addEventListener('click', addRound);
-findPathButton.addEventListener('click', findMerklePath);
-commitButton.addEventListener('click', commit);
+

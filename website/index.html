@@ -8,25 +8,37 @@
 
         window.poseidon = await buildPoseidon();
     </script>
+
+    <style>
+        body {
+            margin: 0;
+            padding-top: 50px;
+        }
+    
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            background: white;
+            border-bottom: 1px solid black;
+        }
+    </style>
 </head>
 
 <body>
 
-    <button id="connectButton">Connect Wallet</button>
-    <button id="getRoundsButton">Get Rounds</button>
-    <button id="addRoundButton">Add Round</button>
-    <button id="findPathButton">Find Merkle Path</button>
-    <button id="commitButton">Commit</button>
-    <div id="output"></div>
-    <input type="text" id="startTime" placeholder="start time">
-    <input type="text" id="commitEndTime" placeholder="commit end time">
-    <input type="text" id="revealEndTime" placeholder="reveal end time">
-    <input type="text" id="merkleRoot" placeholder="merkle root">
-    <input type="text" id="options" placeholder="options">
-    <input type="text" id="choosedOption" placeholder="Choosed option">
+    <nav>
+        <div>ZK Voting</div>
+        <div style="display: flex; gap: 10px;">
+            <div id="output">Not connected</div>
+            <button id="connectButton">Connect Wallet</button>
+        </div>
+    </nav>
 
-
-    <div id="roundsContainer"></div>
+    <div id="addRoundContainer"></div>
+    <div id="roundsContainer">To show rounds connect wallet!</div>
 
     <script src="constants.js"></script>
     <script src="logic.js"></script>

@@ -47,15 +47,40 @@ async function logIn() {
 
 function generateAddRoundBox() {
     const html = `
-    <fieldset class="add-round-box">
-        <legend><strong>Add Round</strong></legend>
-        <input type="text" id="startTime" placeholder="start time">
-        <input type="text" id="commitEndTime" placeholder="commit end time">
-        <input type="text" id="revealEndTime" placeholder="reveal end time"><br>
-        <input type="text" id="merkleRoot" placeholder="merkle root"><br>
-        <input type="text" id="options" placeholder="options"><br>
-        <button id="addRoundButton"> Add Round </button>
-    </fieldset>`
+    <div class="card card-admin">
+        <div class="card-title">Admin Panel</div>
+        <div class="card-body" style="display:block">
+            <div class="admin-grid">
+
+                <div class="input-group">
+                    <label class="info-label">Voting Start</label><br>
+                    <input type="text" id="startTime" placeholder="Select Date & Time">
+                </div>
+
+                <div class="input-group">
+                    <label class="info-label">Commit End</label><br>
+                    <input type="text" id="commitEndTime" placeholder="Select Date & Time">
+                </div>
+
+                <div class="input-group">
+                    <label class="info-label">Reveal End</label><br>
+                    <input type="text" id="revealEndTime" placeholder="Select Date & Time">
+                </div>
+
+                <div class="input-group full-width">
+                    <label class="info-label">Merkle Root</label><br>
+                    <input type="text" id="merkleRoot" placeholder="Merkle Root (Hex)">
+                </div>
+
+                <div class="input-group full-width">
+                    <label class="info-label">Voting Options</label><br>
+                    <input type="text" id="options" placeholder="Options">
+                </div>
+
+            </div>
+            <button id="addRoundButton" class="button button-addround">Add Round</button>
+        </div>
+    </div>`
 
     addRoundContainer.insertAdjacentHTML("afterbegin", html);
     addRoundButton.addEventListener('click', addRound);
@@ -95,7 +120,7 @@ async function getRounds() {
 
 
         const html = `
-                <fieldset class="round-box" data-round-id=${i}>
+                <fieldset data-round-id=${i}>
                     <legend><strong>Round #${i}</strong></legend>
                     
                     Start: ${formatTimestamp(roundDetails.startTime)}<br>

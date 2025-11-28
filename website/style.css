@@ -5,6 +5,10 @@
         --text-main: #040825;
         --text-muted: #6b717c;
         --border-color: #E5E7EB;
+        --card-bg: #FFFFFF;
+        --radius: 12px;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
     }
 
     * {
@@ -73,5 +77,82 @@
     .button-connect {
         background: var(--primary);
         color: white;
+    }
+
+    .button-addround {
+        background: var(--primary);
+        color: white;
+
+    }
+
+    .container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card-admin {
+        margin-bottom: 3rem;
+    }
+
+    .card-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin: 1rem 0 0 2rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+        display: none;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .admin-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .input-group {
+        margin-bottom: 1rem;
+    }
+
+    .info-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+
+    .full-width {
+        grid-column: span 3;
+    }
+
+    input[type="text"],
+    select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-family: 'Inter', sans-serif;
+        background-color: #fff;
+        transition: all 0.2s;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #4F46E5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 

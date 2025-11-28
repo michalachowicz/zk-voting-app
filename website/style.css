@@ -1,0 +1,77 @@
+    :root {
+        --primary: #3026e3;
+        --secondary: #8760e3;
+        --bg-color: #ebeff3;
+        --text-main: #040825;
+        --text-muted: #6b717c;
+        --border-color: #E5E7EB;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        line-height: 1.5;
+        background-image: radial-gradient(at top right, #EEF2FF 0%, #F9FAFB 60%);
+        min-height: 100vh;
+    }
+
+    .navbar {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(10px);
+        padding: 0.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .logo {
+        font-weight: 700;
+        font-size: 2rem;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .wallet-section {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .wallet-address {
+        background: #e3efe6;
+        color: #08774c;
+        border-color: #31e5a3;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        border: 1px solid #065F46;
+        white-space: nowrap;
+        font-size: 1rem;
+    }
+
+    .button {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        font-size: 1rem;
+    }
+
+    .button-connect {
+        background: var(--primary);
+        color: white;
+    }
+

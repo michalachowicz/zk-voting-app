@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="eng">
 <head>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/snarkjs@0.7.5/build/snarkjs.min.js"></script>
     <script type="module">
@@ -9,31 +10,15 @@
         window.poseidon = await buildPoseidon();
     </script>
 
-    <style>
-        body {
-            margin: 0;
-            padding-top: 50px;
-        }
-    
-        nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            background: white;
-            border-bottom: 1px solid black;
-        }
-    </style>
 </head>
 
 <body>
 
-    <nav>
-        <div>ZK Voting</div>
-        <div style="display: flex; gap: 10px;">
-            <div id="output">Not connected</div>
-            <button id="connectButton">Connect Wallet</button>
+    <nav class="navbar">
+        <div class="logo">ZK Voting</div>
+        <div class="wallet-section">
+            <div id="addressBox" class="wallet-address" style="display: none;"></div>
+            <button id="connectButton" class="button button-connect">Connect Wallet</button>
         </div>
     </nav>
 

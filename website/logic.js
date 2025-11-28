@@ -1,5 +1,5 @@
 const connectButton = document.getElementById('connectButton');
-const output = document.getElementById('output');
+const addressBox = document.getElementById('addressBox');
 const addRoundContainer = document.getElementById('addRoundContainer');
 const roundsContainer = document.getElementById('roundsContainer');
 
@@ -35,7 +35,10 @@ async function logIn() {
     console.log(owner);
 
     const address = await signer.getAddress();
-    output.innerText = `Address: ${address}`;
+
+    connectButton.style.display = 'none';
+    addressBox.style.display = "block";
+    addressBox.innerText = address.slice(0, 6) + "..." + address.slice(-4);
     if (address == owner) {
         generateAddRoundBox();
     }

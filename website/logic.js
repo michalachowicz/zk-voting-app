@@ -48,7 +48,9 @@ async function logIn() {
 function generateAddRoundBox() {
     const html = `
     <div class="card card-admin">
-        <div class="card-title">Admin Panel</div>
+        <div class="card-header"">
+            <div class="card-title">Admin Panel</div>
+        </div>
         <div class="card-body" style="display:block">
             <div class="admin-grid">
 
@@ -78,7 +80,7 @@ function generateAddRoundBox() {
                 </div>
 
             </div>
-            <button id="addRoundButton" class="button button-addround">Add Round</button>
+            <button id="addRoundButton" class="button">Add Round</button>
         </div>
     </div>`
 
@@ -118,21 +120,42 @@ async function getRounds() {
             }
         });
 
+        let selectHtml = '<option value="" disabled selected>Select Option</option>';
+        options.forEach(opt => {
+            selectHtml += `<option value="${opt}">${opt}</option>`;
+        });
+
 
         const html = `
-                <fieldset data-round-id=${i}>
-                    <legend><strong>Round #${i}</strong></legend>
-                    
-                    Start: ${formatTimestamp(roundDetails.startTime)}<br>
-                    Commit End: ${formatTimestamp(roundDetails.commitmentEndTime)}<br>
-                    Reveal End: ${formatTimestamp(roundDetails.revealEndTime)}<br>
-                    Root: ${roundDetails.merkleRoot}<br>
-                    Options: ${options}<br>
-                    <input type="text" id="vote-input-${i}" placeholder="Type your choosed option"><br>
-                    <button onclick="commit(${i})"> Commit </button>
-                    <button onclick="reveal(${i})"> Reveal </button>
-                </fieldset>
-                <br> `;
+        <div class="card">
+            <div class="card-header"">
+                <div class="card-title">Round #${i}</div>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Start</span>
+                        <span class="info-value">${formatTimestamp(roundDetails.startTime)}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Commit End</span>
+                        <span class="info-value">${formatTimestamp(roundDetails.commitmentEndTime)}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Reveal End</span>
+                        <span class="info-value">${formatTimestamp(roundDetails.revealEndTime)}</span>
+                    </div>
+                </div>
+                <div class="vote-section">
+                    <label class="info-label">Your Vote</label>
+                    <select id="vote-select-${i}" class="vote-select">${selectHtml}</select >
+                    <div class="button-section">
+                        <button class="button" onclick="commit(${i})">Commit</button>
+                        <button class="button" onclick="reveal(${i})">Reveal</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
 
         roundsContainer.insertAdjacentHTML('beforeend', html);
     }
@@ -185,7 +208,7 @@ async function findMerklePath() {
 }
 
 async function commit(roundId) {
-    const optionText = document.getElementById(`vote-input-${roundId}`).value.trim();
+    const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
     const option = ethers.utils.formatBytes32String(optionText);
     let nullifier = window.poseidon([userSecret, roundId]);
     nullifier = window.poseidon.F.toObject(nullifier);
@@ -231,7 +254,7 @@ async function commit(roundId) {
 }
 
 async function reveal(roundId) {
-    const optionText = document.getElementById(`vote-input-${roundId}`).value.trim();
+    const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
     const option = ethers.utils.formatBytes32String(optionText);
     let nullifier = window.poseidon([userSecret, roundId]);
     nullifier = window.poseidon.F.toObject(nullifier);

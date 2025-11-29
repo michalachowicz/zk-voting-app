@@ -3,6 +3,7 @@
         --secondary: #8760e3;
         --bg-color: #ebeff3;
         --text-main: #040825;
+        --text-info: #6b717c,
         --text-muted: #6b717c;
         --border-color: #E5E7EB;
         --card-bg: #FFFFFF;
@@ -36,7 +37,6 @@
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
         position: sticky;
         top: 0;
-        z-index: 100;
     }
 
     .logo {
@@ -72,23 +72,13 @@
         cursor: pointer;
         width: 100%;
         font-size: 1rem;
-    }
-
-    .button-connect {
         background: var(--primary);
         color: white;
-    }
-
-    .button-addround {
-        background: var(--primary);
-        color: white;
-
     }
 
     .container {
-        max-width: 800px;
+        max-width: 750px;
         margin: 2rem auto;
-        padding: 0 1rem;
     }
 
     .card {
@@ -97,23 +87,20 @@
         box-shadow: var(--shadow);
         border: 1px solid var(--border-color);
         overflow: hidden;
-        transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .card-admin {
-        margin-bottom: 3rem;
+        margin-bottom: 4rem;
     }
 
     .card-title {
         font-weight: 700;
         font-size: 1.1rem;
-        margin: 1rem 0 0 2rem;
+        margin: 1rem 0 0.75rem 2rem;
     }
 
     .card-body {
         padding: 1.5rem;
-        display: none;
-        animation: slideDown 0.3s ease-out;
     }
 
     .admin-grid {
@@ -130,8 +117,8 @@
         font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
-        color: var(--text-muted);
-        margin-bottom: 4px;
+        color: var(--text-info);
+        margin-bottom: 0.25rem;
     }
 
     .full-width {
@@ -144,15 +131,58 @@
         padding: 0.75rem 1rem;
         border: 1px solid #E5E7EB;
         border-radius: 8px;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         font-family: 'Inter', sans-serif;
-        background-color: #fff;
-        transition: all 0.2s;
+        background-color: #ffffff;
     }
 
     input:focus {
         outline: none;
         border-color: #4F46E5;
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        box-shadow: 0 0 0 2px rgba(80, 70, 230, 0.1);
     }
 
+    .rounds-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .card-header {
+        background: #f6f6f9;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-value {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .vote-section {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .button-section {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .vote-select {
+        cursor: pointer;
+    }

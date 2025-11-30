@@ -47,11 +47,12 @@ async function logIn() {
 
 function generateAddRoundBox() {
     const html = `
-    <div class="card card-admin">
-        <div class="card-header"">
+    <div class="card card-admin open">
+        <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
             <div class="card-title">Admin Panel</div>
+            <label class="arrow">▼</label>
         </div>
-        <div class="card-body" style="display:block">
+        <div class="card-body">
             <div class="admin-grid">
 
                 <div class="input-group">
@@ -128,8 +129,9 @@ async function getRounds() {
 
         const html = `
         <div class="card">
-            <div class="card-header"">
+            <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
                 <div class="card-title">Round #${i}</div>
+                <label class="arrow">▼</label>
             </div>
             <div class="card-body">
                 <div class="info-grid">

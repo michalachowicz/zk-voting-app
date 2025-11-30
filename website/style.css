@@ -3,7 +3,7 @@
         --secondary: #8760e3;
         --bg-color: #ebeff3;
         --text-main: #040825;
-        --text-info: #6b717c,
+        --text-info: #6b717c;
         --text-muted: #6b717c;
         --border-color: #E5E7EB;
         --card-bg: #FFFFFF;
@@ -87,6 +87,12 @@
         box-shadow: var(--shadow);
         border: 1px solid var(--border-color);
         overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
 
     .card-admin {
@@ -101,6 +107,12 @@
 
     .card-body {
         padding: 1.5rem;
+        display: none;
+        animation: slideDown 0.2s ease-out;
+    }
+
+    .card.open .card-body {
+        display: block;
     }
 
     .admin-grid {
@@ -152,6 +164,20 @@
         background: #f6f6f9;
         border-bottom: 1px solid var(--border-color);
         display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .arrow {
+        margin-right: 1rem;
+        color: var(--text-info);
+        font-size: 0.9rem;
+        transition: transform 0.3s;
+    }
+
+    .card.open .arrow {
+        transform: rotate(180deg);
     }
 
     .info-grid {
@@ -185,4 +211,16 @@
 
     .vote-select {
         cursor: pointer;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-25%) scaleY(0.5);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+        }
     }

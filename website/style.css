@@ -1,5 +1,6 @@
     :root {
         --primary: #3026e3;
+        --primary-hover: #261cd9;
         --secondary: #8760e3;
         --bg-color: #ebeff3;
         --text-main: #040825;
@@ -74,6 +75,10 @@
         font-size: 1rem;
         background: var(--primary);
         color: white;
+    }
+
+    .button:hover {
+        background: var(--primary-hover);
     }
 
     .container {
@@ -161,12 +166,16 @@
     }
 
     .card-header {
-        background: #f6f6f9;
+        background: #F9FAFB;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
         cursor: pointer;
+    }
+
+    .card-header:hover {
+        background: #F3F4F5;
     }
 
     .arrow {

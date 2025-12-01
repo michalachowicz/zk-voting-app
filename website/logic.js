@@ -77,7 +77,8 @@ function generateAddRoundBox() {
 
                 <div class="input-group full-width">
                     <label class="info-label">Voting Options</label><br>
-                    <input type="text" id="options" placeholder="Options">
+                    <div id="optionsContainer" class="options-container"></div>
+                    <button id="addOptionButton" class="button-addOption">+ Add Option</button>
                 </div>
 
             </div>
@@ -87,6 +88,7 @@ function generateAddRoundBox() {
 
     addRoundContainer.insertAdjacentHTML("afterbegin", html);
     addRoundButton.addEventListener('click', addRound);
+    addOptionButton.addEventListener('click', addOptionInput);
 
     flatpickr(".date-picker", {
         enableTime: true,
@@ -94,6 +96,31 @@ function generateAddRoundBox() {
         time_24hr: true,
         minDate: "today"
     });
+
+    addOptionInput();
+    addOptionInput();
+}
+
+function addOptionInput() {
+    const optionsContainer = document.getElementById('optionsContainer');
+    const div = document.createElement('div');
+    div.className = 'option-row';
+
+    div.innerHTML = `
+        <input type="text" class="option-input" placeholder="Enter option">
+        <button class="button-removeOption" onclick="removeOption(this)">X</button>
+    `;
+
+    optionsContainer.appendChild(div);
+}
+
+function removeOption(button) {
+    const row = button.parentElement;
+    if (document.getElementById('optionsContainer').children.length > 2) {
+        row.remove();
+    } else {
+        row.querySelector('input').value = '';
+    }
 }
 
 function formatTimestamp(timestamp) {
@@ -177,12 +204,11 @@ async function addRound() {
     const merkleRoot = document.getElementById('merkleRoot');
     const options = document.getElementById('options');
     
-    console.log(startTime, commitEndTime, revealEndTime);
     const startTimestamp = Math.floor(new Date(startTime.value).getTime() / 1000);
     const commitEndTimestamp = Math.floor(new Date(commitEndTime.value).getTime() / 1000);
     const revealEndTimestamp = Math.floor(new Date(revealEndTime.value).getTime() / 1000);
-    console.log(startTimestamp, commitEndTimestamp, revealEndTimestamp);
     const options_hex = options.value.split(',').map(item => ethers.utils.formatBytes32String(item.trim()));
+
     await contract.functions.addRound(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, options_hex);
     startTime.value = '';
     commitEndTime.value = '';

@@ -153,7 +153,7 @@ async function getRounds() {
 
     roundsContainer.innerHTML = "";
 
-    for (let i=0; i < roundsCount; i++) {
+    for (let i = roundsCount - 1; i >= 0; i--) {
         let roundDetails = await contract.roundDetails(i);
         console.log(roundDetails);
         let optionsRaw = await contract.getOptions(i);

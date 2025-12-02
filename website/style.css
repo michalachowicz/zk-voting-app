@@ -295,6 +295,21 @@
         background: #DC2626;
     }
 
+    .results-box {
+        /* margin-top: 0.5rem; */
+        padding: 0.25rem 0.75rem 0.5rem 0.75rem;
+        border: 1px dashed #CBD5E1;
+        border-radius: var(--button-radius);
+        margin-bottom: 0.5rem;
+    }
+
+    .result-row {
+        display: flex;
+        justify-content: space-between;
+        /* padding: 4px 0; */
+        font-size: 0.9rem;
+    }
+
     @keyframes slideDown {
         from {
             opacity: 0;

@@ -97,8 +97,8 @@ function generateAddRoundBox() {
         minDate: "today"
     });
 
-    addOptionInput();
-    addOptionInput();
+    addMandatoryOptionInput();
+    addMandatoryOptionInput();
 }
 
 function addOptionInput() {
@@ -114,12 +114,22 @@ function addOptionInput() {
     optionsContainer.appendChild(div);
 }
 
+function addMandatoryOptionInput() {
+    const optionsContainer = document.getElementById('optionsContainer');
+    const div = document.createElement('div');
+    div.className = 'option-row';
+
+    div.innerHTML = `
+        <input type="text" class="option-input" placeholder="Enter option">
+    `;
+
+    optionsContainer.appendChild(div);
+}
+
 function removeOption(button) {
     const row = button.parentElement;
     if (document.getElementById('optionsContainer').children.length > 2) {
         row.remove();
-    } else {
-        row.querySelector('input').value = '';
     }
 }
 
@@ -147,18 +157,24 @@ async function getRounds() {
         let roundDetails = await contract.roundDetails(i);
         console.log(roundDetails);
         let optionsRaw = await contract.getOptions(i);
-        let options = optionsRaw.map(item => {
-            try {
-                return ethers.utils.parseBytes32String(item);
-            } catch (error) {
-                return item;
-            }
-        });
 
         let selectHtml = '<option value="" disabled selected>Select Option</option>';
-        options.forEach(opt => {
-            selectHtml += `<option value="${opt}">${opt}</option>`;
-        });
+        let resultsHtml = '';
+        for (const optionsHex of optionsRaw) {
+            let text;
+            try {
+                text = ethers.utils.parseBytes32String(optionsHex);
+            } catch (error) {
+                text = optionsHex;
+            }
+
+            selectHtml += `<option value="${text}">${text}</option>`;
+
+            let count = await contract.votes(i, optionsHex);
+            resultsHtml += `<div class="result-row"><span>${text}</span><b>${count}</b></div>`;
+        };
+
+        const resultsSection = `<div class="results-box"><span class="info-label">Results</span>${resultsHtml}</div>`;
 
 
         const html = `
@@ -182,6 +198,7 @@ async function getRounds() {
                         <span class="info-value">${formatTimestamp(roundDetails.revealEndTime)}</span>
                     </div>
                 </div>
+                ${resultsSection}
                 <div class="vote-section">
                     <label class="info-label">Your Vote</label>
                     <select id="vote-select-${i}" class="vote-select">${selectHtml}</select >
@@ -202,12 +219,19 @@ async function addRound() {
     const commitEndTime = document.getElementById('commitEndTime');
     const revealEndTime = document.getElementById('revealEndTime');
     const merkleRoot = document.getElementById('merkleRoot');
-    const options = document.getElementById('options');
+    const optionInputs = document.querySelectorAll('.option-input');
     
     const startTimestamp = Math.floor(new Date(startTime.value).getTime() / 1000);
     const commitEndTimestamp = Math.floor(new Date(commitEndTime.value).getTime() / 1000);
     const revealEndTimestamp = Math.floor(new Date(revealEndTime.value).getTime() / 1000);
-    const options_hex = options.value.split(',').map(item => ethers.utils.formatBytes32String(item.trim()));
+
+    const options = [];
+    optionInputs.forEach(option => {
+        if (option.value.trim() !== "") {
+            options.push(option.value.trim());
+        }
+    });
+    const options_hex = options.map(option => ethers.utils.formatBytes32String(option));
 
     await contract.functions.addRound(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, options_hex);
     startTime.value = '';

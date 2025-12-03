@@ -163,7 +163,7 @@ async function getRounds() {
         let revealDisabledClass = '';
 
         if (now < roundDetails.startTime) {
-            statusHtml = `<span class="status-badge status-waiting">Waiting...</span>`
+            statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}">Waiting...</span>`;
             status = 'waiting';
             commitDisabled = 'disabled';
             revealDisabled = 'disabled';
@@ -251,6 +251,25 @@ async function getRounds() {
             roundsContainer.getElementsByClassName('card')[0].classList.toggle('open');
         }
     }
+}
+
+setInterval(updateCountdowns, 1000);
+function updateCountdowns() {
+    const timers = document.querySelectorAll('.countdown-timer');
+    const now = Math.floor(Date.now() / 1000);
+    timers.forEach(timer => {
+        const target = parseInt(timer.dataset.target);
+        const diff = target - now;
+        if (diff <= 0) {
+            timer.innerHTML = "Starting...";
+        } else {
+            const d = Math.floor(diff / (3600 * 24));
+            const h = Math.floor((diff % (3600 * 24)) / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            timer.innerHTML = `⏳ In: ${d}d ${h}h ${m}m ${s}s`;
+        }
+    });
 }
 
 async function addRound() {

@@ -156,7 +156,7 @@ async function fetchRounds() {
         let [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(i), contract.getOptions(i)]);
         let results = {};
         if (now > roundDetails.commitmentEndTime) {}
-            for (let opt of optionsRaw) {
+            for (const opt of optionsRaw) {
                 let count = await contract.votes(i, opt);
                 results[opt] = count;
         };
@@ -176,7 +176,7 @@ async function fetchNewestRound() {
     const roundId = await contract.roundsCount() - 1;
     let results = {};
     const [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(roundId), contract.getOptions(roundId)]);
-    for (let opt of optionsRaw) {
+    for (const opt of optionsRaw) {
         results[opt] = 0;
     };
     const roundData = {
@@ -187,6 +187,26 @@ async function fetchNewestRound() {
     }
     cachedRoundsData.unshift(roundData);
     renderRounds();
+}
+
+async function refreshRound(roundId) {
+    const [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(roundId), contract.getOptions(roundId)]);
+    results = {};
+    for (const opt of optionsRaw) {
+        let count = await contract.votes(roundId, opt);
+        results[opt] = count;
+    }
+    const roundData = {
+        id: roundId,
+        roundDetails: roundDetails,
+        optionsRaw: optionsRaw,
+        results: results
+    }
+    const index = cachedRoundsData.findIndex(value => value === roundId);
+    cachedRoundsData[index] = roundData;
+    const html = generateRoundHtml(roundData);
+    const roundCard = document.getElementById(`card${roundId}`)
+    roundCard.innerHTML = html;
 }
 
 function generateRoundHtml(roundData) {
@@ -229,7 +249,7 @@ function generateRoundHtml(roundData) {
     let selectHtml = '<option value="" disabled selected>Select Option</option>';
 
     let resultsHtml = '';
-    for (let opt of optionsRaw) {
+    for (const opt of optionsRaw) {
         let text;
         try {
             text = ethers.utils.parseBytes32String(opt);
@@ -279,6 +299,9 @@ function generateRoundHtml(roundData) {
                 ${selectSectionHtml}
                 ${buttonSectionHtml}
             </div>
+            <div>
+            <button class="button-refresh" onclick="refreshRound(${roundId})">Refresh</button>
+            </div>
         </div>`;
 
     return html;
@@ -299,7 +322,7 @@ function renderRound(roundData) {
 
 function renderRounds() {
     roundsContainer.innerHTML = "";
-    for (let roundData of cachedRoundsData) {
+    for (const roundData of cachedRoundsData) {
         renderRound(roundData);
     }
 }
@@ -319,7 +342,7 @@ function updateCountdowns() {
             const h = Math.floor((diff % (3600 * 24)) / 3600);
             const m = Math.floor((diff % 3600) / 60);
             const s = diff % 60;
-            timer.innerHTML = `⏳ In: ${d}d ${h}h ${m}m ${s}s`;
+            timer.innerHTML = `Starts In: ${d}d ${h}h ${m}m ${s}s`;
         }
     });
 }
@@ -478,8 +501,10 @@ async function reveal(roundId) {
         const tx = await contract.functions.reveal(option, nullifier, roundId, hashedSalt);
         showToast("Transaction sent...", "success");
         const receipt = await tx.wait();
-        if (receipt.status === 1)
+        if (receipt.status === 1) {
             showToast("Vote revealed successfully!", "success");
+            refreshRound(roundId);
+        }
         else
             showToast("Transaction failed!", "Error");
     }

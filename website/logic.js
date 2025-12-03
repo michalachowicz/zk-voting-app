@@ -172,7 +172,24 @@ async function fetchRounds() {
     console.log(cachedRoundsData);
 }
 
-function renderRound(roundData) {
+async function fetchNewestRound() {
+    const roundId = await contract.roundsCount() - 1;
+    let results = {};
+    const [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(roundId), contract.getOptions(roundId)]);
+    for (let opt of optionsRaw) {
+        results[opt] = 0;
+    };
+    const roundData = {
+        id: roundId,
+        roundDetails: roundDetails,
+        optionsRaw: optionsRaw,
+        results: results
+    }
+    cachedRoundsData.unshift(roundData);
+    renderRounds();
+}
+
+function generateRoundHtml(roundData) {
     const now = Math.floor(Date.now() / 1000);
     let roundId = roundData.id;
     let roundDetails = roundData.roundDetails;
@@ -186,7 +203,7 @@ function renderRound(roundData) {
     let revealDisabledClass = '';
 
     if (now < roundDetails.startTime) {
-        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}"></span>`;
+        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}">Waiting...</span>`;
         status = 'waiting';
         commitDisabled = 'disabled';
         revealDisabled = 'disabled';
@@ -237,33 +254,41 @@ function renderRound(roundData) {
 
 
     const html = `
-        <div class="card">
-            <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
-                <div class="card-title">Round #${roundId}</div>
-                ${statusHtml}
-                <label class="arrow">▼</label>
-            </div>
-            <div class="card-body">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Start</span>
-                        <span class="info-value">${formatTimestamp(roundDetails.startTime)}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Commit End</span>
-                        <span class="info-value">${formatTimestamp(roundDetails.commitmentEndTime)}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Reveal End</span>
-                        <span class="info-value">${formatTimestamp(roundDetails.revealEndTime)}</span>
-                    </div>
+        <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+            <div class="card-title">Round #${roundId}</div>
+            ${statusHtml}
+            <label class="arrow">▼</label>
+        </div>
+        <div class="card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Start</span>
+                    <span class="info-value">${formatTimestamp(roundDetails.startTime)}</span>
                 </div>
-                ${resultsSectionHtml}
-                <div class="vote-section">
-                    ${selectSectionHtml}
-                    ${buttonSectionHtml}
+                <div class="info-item">
+                    <span class="info-label">Commit End</span>
+                    <span class="info-value">${formatTimestamp(roundDetails.commitmentEndTime)}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Reveal End</span>
+                    <span class="info-value">${formatTimestamp(roundDetails.revealEndTime)}</span>
                 </div>
             </div>
+            ${resultsSectionHtml}
+            <div class="vote-section">
+                ${selectSectionHtml}
+                ${buttonSectionHtml}
+            </div>
+        </div>`;
+
+    return html;
+}
+
+function renderRound(roundData) {
+    const roundHtml = generateRoundHtml(roundData);
+    const html = `
+        <div id="card${roundData.id}" class="card">
+            ${roundHtml}
         </div>`;
 
     roundsContainer.insertAdjacentHTML('beforeend', html);
@@ -328,20 +353,22 @@ async function addRound() {
         const tx = await contract.functions.addRound(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, options_hex);
         showToast("Transaction sent...", "success");
         const receipt = await tx.wait();
-        if (receipt.status === 1)
+        if (receipt.status === 1) {
             showToast("Round added successfully!", "success");
+            startTime.value = '';
+            commitEndTime.value = '';
+            revealEndTime.value = '';
+            merkleRoot.value = '';
+            document.getElementById('optionsContainer').innerHTML = '';
+            addMandatoryOptionInput();
+            addMandatoryOptionInput();
+            console.log('Round added');
+            await fetchNewestRound();
+        }
         else
             showToast("Transaction failed!", "Error");
 
-        startTime.value = '';
-        commitEndTime.value = '';
-        revealEndTime.value = '';
-        merkleRoot.value = '';
-        document.getElementById('optionsContainer').innerHTML = '';
-        addMandatoryOptionInput();
-        addMandatoryOptionInput();
-        console.log('Round added')
-        await fetchRound();
+        
     }
     catch (e) {
         console.error(e);

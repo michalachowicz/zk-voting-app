@@ -108,7 +108,7 @@ function addOptionInput() {
 
     div.innerHTML = `
         <input type="text" class="option-input" placeholder="Enter option">
-        <button class="button-removeOption" onclick="removeOption(this)">X</button>
+        <button class="button-removeOption" onclick="this.parentElement.remove()">X</button>
     `;
 
     optionsContainer.appendChild(div);
@@ -124,13 +124,6 @@ function addMandatoryOptionInput() {
     `;
 
     optionsContainer.appendChild(div);
-}
-
-function removeOption(button) {
-    const row = button.parentElement;
-    if (document.getElementById('optionsContainer').children.length > 2) {
-        row.remove();
-    }
 }
 
 function formatTimestamp(timestamp) {
@@ -274,7 +267,9 @@ async function addRound() {
     commitEndTime.value = '';
     revealEndTime.value = '';
     merkleRoot.value = '';
-    options.value = '';
+    document.getElementById('optionsContainer').innerHTML = '';
+    addMandatoryOptionInput();
+    addMandatoryOptionInput();
     console.log('Round added')
 }
 

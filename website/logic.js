@@ -2,8 +2,14 @@ const connectButton = document.getElementById('connectButton');
 const addressBox = document.getElementById('addressBox');
 const addRoundContainer = document.getElementById('addRoundContainer');
 const roundsContainer = document.getElementById('roundsContainer');
+const filterContainer = document.getElementById('filter-container')
+const filterButtonAll = document.getElementById('buttonFilterAll');
+const filterButtonWaiting = document.getElementById('buttonFilterWaiting');
+const filterButtonCommit = document.getElementById('buttonFilterCommit');
+const filterButtonReveal = document.getElementById('buttonFilterReveal');
+const filterButtonEnded = document.getElementById('buttonFilterEnded');
 
-let provider, signer, contract, userSecret, userId, cachedRoundsData = [];
+let provider, signer, contract, userSecret, userId, cachedRoundsData = [], filterStatus = "All";
 
 async function switchToArbitrum() {
     await window.ethereum.request({
@@ -168,6 +174,10 @@ async function fetchRounds() {
         }
         cachedRoundsData.push(roundData);
         renderRound(roundData);
+        if (i == roundsCount - 1) {
+            const firstVisibleCard = roundsContainer.querySelector('.card');
+            firstVisibleCard.classList.add('open');
+        }
     }
     console.log(cachedRoundsData);
 }
@@ -202,11 +212,12 @@ async function refreshRound(roundId) {
         optionsRaw: optionsRaw,
         results: results
     }
-    const index = cachedRoundsData.findIndex(value => value === roundId);
+    const index = cachedRoundsData.findIndex(value => value.id === roundId);
     cachedRoundsData[index] = roundData;
     const html = generateRoundHtml(roundData);
     const roundCard = document.getElementById(`card${roundId}`)
     roundCard.innerHTML = html;
+    showToast(`Round ${roundId} refreshed!`)
 }
 
 function generateRoundHtml(roundData) {
@@ -223,26 +234,26 @@ function generateRoundHtml(roundData) {
     let revealDisabledClass = '';
 
     if (now < roundDetails.startTime) {
-        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}">Waiting...</span>`;
-        status = 'waiting';
+        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}" data-text="Starts">Waiting...</span>`;
+        status = 'Waiting';
         commitDisabled = 'disabled';
         revealDisabled = 'disabled';
         commitDisabledClass = 'button-disabled';
         revealDisabledClass = 'button-disabled';
     } else if (now <= roundDetails.commitmentEndTime) {
-        statusHtml = `<span class="status-badge status-commit">Commit Phase</span>`
-        status = 'commit';
+        statusHtml = `<span class="countdown-timer status-badge status-commit" data-target="${roundDetails.commitmentEndTime}" data-text="Commit ends">Waiting...</span>`;
+        status = 'Commit';
         revealDisabled = 'disabled';
         revealDisabledClass = 'button-disabled';
     } else if (now <= roundDetails.revealEndTime) {
-        statusHtml = `<span class="status-badge status-reveal">Reveal Phase</span>`
-        status = 'reveal';
+        statusHtml = `<span class="countdown-timer status-badge status-reveal" data-target="${roundDetails.revealEndTime}" data-text="Reveal ends">Waiting...</span>`;
+        status = 'Reveal';
         commitDisabled = 'disabled';
         commitDisabledClass = 'button-disabled';
         resultsBadge = '📊 Live Results';
     } else {
         statusHtml = `<span class="status-badge status-ended">🏁 Ended</span>`
-        status = 'ended';
+        status = 'Ended';
         resultsBadge = '🏆 Final Results';
     }
 
@@ -261,7 +272,7 @@ function generateRoundHtml(roundData) {
         resultsHtml += `<div class="result-row"><span>${text}</span><b>${results[opt]}</b></div>`;
     };
 
-    const resultsSectionHtml = (status === 'reveal' || status === 'ended') ?
+    const resultsSectionHtml = (status === 'Reveal' || status === 'Ended') ?
         `<div class="results-box"><span class="info-label">${resultsBadge}</span>${resultsHtml}</div>` : '';
     const selectSectionHtml = (status != 'ended') ?
         `<label class="info-label">Your Vote</label>
@@ -271,13 +282,21 @@ function generateRoundHtml(roundData) {
             <button class="button ${commitDisabledClass}" onclick="commit(${roundId})" ${commitDisabled}>Commit</button>
             <button class="button ${revealDisabledClass}" onclick="reveal(${roundId})" ${revealDisabled}>Reveal</button>
         </div>` : '';
+    const buttonRefresh = (status === 'Reveal') ?
+        `<button class="button-refresh" title="Refresh this round"
+            onclick = "event.stopPropagation(); refreshRound(${roundId})" >
+            🔄
+        </button > ` : '';
 
 
     const html = `
         <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
             <div class="card-title">Round #${roundId}</div>
             ${statusHtml}
+            <div class="header-actions">
+            ${buttonRefresh}
             <label class="arrow">▼</label>
+            </div>
         </div>
         <div class="card-body">
             <div class="info-grid">
@@ -299,25 +318,22 @@ function generateRoundHtml(roundData) {
                 ${selectSectionHtml}
                 ${buttonSectionHtml}
             </div>
-            <div>
-            <button class="button-refresh" onclick="refreshRound(${roundId})">Refresh</button>
-            </div>
-        </div>`;
 
-    return html;
+        </div>`;
+    
+    const hidden = (status != filterStatus && filterStatus != 'All') ? 'hidden' : '';
+
+    return [html, hidden];
 }
 
-function renderRound(roundData) {
-    const roundHtml = generateRoundHtml(roundData);
+function renderRound(roundData, open=false) {
+    const [ roundHtml, hidden ] = generateRoundHtml(roundData);
     const html = `
-        <div id="card${roundData.id}" class="card">
+        <div id="card${roundData.id}" class="card ${hidden}" data-id="${roundData.id}">
             ${roundHtml}
         </div>`;
 
     roundsContainer.insertAdjacentHTML('beforeend', html);
-    if (roundsContainer.children.length == 1) {
-        roundsContainer.getElementsByClassName('card')[0].classList.toggle('open');
-    }
 }
 
 function renderRounds() {
@@ -325,6 +341,14 @@ function renderRounds() {
     for (const roundData of cachedRoundsData) {
         renderRound(roundData);
     }
+    const firstVisibleCard = roundsContainer.querySelector('.card:not(.hidden)');
+
+    if (firstVisibleCard) {
+        firstVisibleCard.classList.add('open');
+    } else {
+        roundsContainer.innerHTML = '<div class="empty-state">No rounds match filter.</div>';
+    }
+
 }
 
 setInterval(updateCountdowns, 1000);
@@ -335,14 +359,23 @@ function updateCountdowns() {
         const target = parseInt(timer.dataset.target);
         const diff = target - now;
         if (diff <= 0) {
-            timer.innerHTML = "Starting...";
-            renderRounds();
+            const card = timer.closest('.card');
+            const roundId = parseInt(card.dataset.id);
+            const index = cachedRoundsData.findIndex(value => value.id === roundId);
+            const roundData = cachedRoundsData[index];
+            const [html, hidden] = generateRoundHtml(roundData);
+            if (hidden == 'hidden')
+                card.classList.add('hidden');
+            else
+                card.classList.remove('hidden');
+            card.innerHTML = html;
+
         } else {
             const d = Math.floor(diff / (3600 * 24));
             const h = Math.floor((diff % (3600 * 24)) / 3600);
             const m = Math.floor((diff % 3600) / 60);
             const s = diff % 60;
-            timer.innerHTML = `Starts In: ${d}d ${h}h ${m}m ${s}s`;
+            timer.innerHTML = `${timer.dataset.text} In: ${d}d ${h}h ${m}m ${s}s`;
         }
     });
 }
@@ -523,5 +556,17 @@ function showToast(msg, type = 'success') {
     setTimeout(() => div.remove(), 4000);
 }
 
+function setFilter(filter) {
+    filterStatus = filter;
+    renderRounds();
+    document.querySelector(".button-filter.active").classList.remove('active');
+    document.getElementById(`buttonFilter${filter}`).classList.add('active');
+}
+
 connectButton.addEventListener('click', logIn);
+filterButtonAll.addEventListener('click', () => { setFilter("All") });
+filterButtonWaiting.addEventListener('click', () => { setFilter("Waiting") });
+filterButtonCommit.addEventListener('click', () => { setFilter("Commit") });
+filterButtonReveal.addEventListener('click', () => { setFilter("Reveal") });
+filterButtonEnded.addEventListener('click', () => { setFilter("Ended") });
 

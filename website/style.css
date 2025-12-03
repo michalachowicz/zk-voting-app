@@ -81,6 +81,16 @@
         background: var(--primary-hover);
     }
 
+    .button-disabled {
+        background: #D1D5DB;
+        cursor: not-allowed;
+        color: #6B7280;
+    }
+
+    .button-disabled:hover {
+        background: #D1D5DB;
+    }
+
     .container {
         max-width: 750px;
         margin: 2rem auto;
@@ -308,6 +318,31 @@
         justify-content: space-between;
         /* padding: 4px 0; */
         font-size: 0.9rem;
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 99px;
+        color: white;
+    }
+
+    .status-waiting {
+        background: #F59E0B;
+    }
+
+    .status-commit {
+        background: #10B981;
+    }
+
+    .status-reveal {
+        background: #3B82F6;
+    }
+
+    .status-ended {
+        background: #6B7280;
     }
 
     @keyframes slideDown {

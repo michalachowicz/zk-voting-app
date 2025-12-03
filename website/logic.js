@@ -148,17 +148,46 @@ function formatTimestamp(timestamp) {
 }
 
 async function getRounds() {
-    const roundsCount = await contract.roundsCount();
-    console.log(roundsCount);
-
     roundsContainer.innerHTML = "";
+    const roundsCount = await contract.roundsCount();
+    const now = Math.floor(Date.now() / 1000);
 
     for (let i = roundsCount - 1; i >= 0; i--) {
         let roundDetails = await contract.roundDetails(i);
-        console.log(roundDetails);
         let optionsRaw = await contract.getOptions(i);
+        let status = '';
+        let resultsBadge = '';
+        let commitDisabled = '';
+        let revealDisabled = '';
+        let commitDisabledClass = '';
+        let revealDisabledClass = '';
+
+        if (now < roundDetails.startTime) {
+            statusHtml = `<span class="status-badge status-waiting">Waiting...</span>`
+            status = 'waiting';
+            commitDisabled = 'disabled';
+            revealDisabled = 'disabled';
+            commitDisabledClass = 'button-disabled';
+            revealDisabledClass = 'button-disabled';
+        } else if (now <= roundDetails.commitmentEndTime) {
+            statusHtml = `<span class="status-badge status-commit">Commit Phase</span>`
+            status = 'commit';
+            revealDisabled = 'disabled';
+            revealDisabledClass = 'button-disabled';
+        } else if (now <= roundDetails.revealEndTime) {
+            statusHtml = `<span class="status-badge status-reveal">Reveal Phase</span>`
+            status = 'reveal';
+            commitDisabled = 'disabled';
+            commitDisabledClass = 'button-disabled';
+            resultsBadge = '📊 Live Results';
+        } else {
+            statusHtml = `<span class="status-badge status-ended">🏁 Ended</span>`
+            status = 'ended';
+            resultsBadge = '🏆 Final Results';
+        }
 
         let selectHtml = '<option value="" disabled selected>Select Option</option>';
+
         let resultsHtml = '';
         for (const optionsHex of optionsRaw) {
             let text;
@@ -169,18 +198,29 @@ async function getRounds() {
             }
 
             selectHtml += `<option value="${text}">${text}</option>`;
-
-            let count = await contract.votes(i, optionsHex);
-            resultsHtml += `<div class="result-row"><span>${text}</span><b>${count}</b></div>`;
+            if (status === 'reveal' || status === 'ended') {
+                let count = await contract.votes(i, optionsHex);
+                resultsHtml += `<div class="result-row"><span>${text}</span><b>${count}</b></div>`;
+            }
         };
 
-        const resultsSection = `<div class="results-box"><span class="info-label">Results</span>${resultsHtml}</div>`;
+        const resultsSectionHtml = (status === 'reveal' || status === 'ended') ?
+            `<div class="results-box"><span class="info-label">${resultsBadge}</span>${resultsHtml}</div>` : '';
+        const selectSectionHtml = (status != 'ended') ? 
+            `<label class="info-label">Your Vote</label>
+            <select id="vote-select-${i}" class="vote-select">${selectHtml}</select >` : '';
+        const buttonSectionHtml = (status != 'ended') ? 
+        `<div class="button-section">
+            <button class="button ${commitDisabledClass}" onclick="commit(${i})" ${commitDisabled}>Commit</button>
+            <button class="button ${revealDisabledClass}" onclick="reveal(${i})" ${revealDisabled}>Reveal</button>
+        </div>` : '';
 
 
         const html = `
         <div class="card">
             <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
                 <div class="card-title">Round #${i}</div>
+                ${statusHtml}
                 <label class="arrow">▼</label>
             </div>
             <div class="card-body">
@@ -198,14 +238,10 @@ async function getRounds() {
                         <span class="info-value">${formatTimestamp(roundDetails.revealEndTime)}</span>
                     </div>
                 </div>
-                ${resultsSection}
+                ${resultsSectionHtml}
                 <div class="vote-section">
-                    <label class="info-label">Your Vote</label>
-                    <select id="vote-select-${i}" class="vote-select">${selectHtml}</select >
-                    <div class="button-section">
-                        <button class="button" onclick="commit(${i})">Commit</button>
-                        <button class="button" onclick="reveal(${i})">Reveal</button>
-                    </div>
+                    ${selectSectionHtml}
+                    ${buttonSectionHtml}
                 </div>
             </div>
         </div>`;
@@ -273,6 +309,7 @@ async function findMerklePath() {
 
 async function commit(roundId) {
     const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
+    if (optionText == '') throw Error('You have to choose the option!');
     const option = ethers.utils.formatBytes32String(optionText);
     let nullifier = window.poseidon([userSecret, roundId]);
     nullifier = window.poseidon.F.toObject(nullifier);

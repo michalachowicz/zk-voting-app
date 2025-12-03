@@ -3,7 +3,7 @@ const addressBox = document.getElementById('addressBox');
 const addRoundContainer = document.getElementById('addRoundContainer');
 const roundsContainer = document.getElementById('roundsContainer');
 
-let provider, signer, contract, userSecret, userId;
+let provider, signer, contract, userSecret, userId, cachedRoundsData = [];
 
 async function switchToArbitrum() {
     await window.ethereum.request({
@@ -44,7 +44,7 @@ async function logIn() {
             generateAddRoundBox();
         }
         showToast("Logged in successfully!");
-        await getRounds();
+        await fetchRounds();
     }
     catch (e) {
         console.error(e);
@@ -147,79 +147,99 @@ function formatTimestamp(timestamp) {
     return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
 }
 
-async function getRounds() {
-    roundsContainer.innerHTML = "";
-    const roundsCount = await contract.roundsCount();
+async function fetchRounds() {
     const now = Math.floor(Date.now() / 1000);
+    const roundsCount = await contract.roundsCount();
+    roundsContainer.innerHTML = "";
 
     for (let i = roundsCount - 1; i >= 0; i--) {
-        let roundDetails = await contract.roundDetails(i);
-        let optionsRaw = await contract.getOptions(i);
-        let status = '';
-        let resultsBadge = '';
-        let commitDisabled = '';
-        let revealDisabled = '';
-        let commitDisabledClass = '';
-        let revealDisabledClass = '';
+        let [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(i), contract.getOptions(i)]);
+        let results = {};
+        if (now > roundDetails.commitmentEndTime) {}
+            for (let opt of optionsRaw) {
+                let count = await contract.votes(i, opt);
+                results[opt] = count;
+        };
+        let roundData = {
+            id: i,
+            roundDetails: roundDetails,
+            optionsRaw: optionsRaw,
+            results: results
+        }
+        cachedRoundsData.push(roundData);
+        renderRound(roundData);
+    }
+    console.log(cachedRoundsData);
+}
 
-        if (now < roundDetails.startTime) {
-            statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}">Waiting...</span>`;
-            status = 'waiting';
-            commitDisabled = 'disabled';
-            revealDisabled = 'disabled';
-            commitDisabledClass = 'button-disabled';
-            revealDisabledClass = 'button-disabled';
-        } else if (now <= roundDetails.commitmentEndTime) {
-            statusHtml = `<span class="status-badge status-commit">Commit Phase</span>`
-            status = 'commit';
-            revealDisabled = 'disabled';
-            revealDisabledClass = 'button-disabled';
-        } else if (now <= roundDetails.revealEndTime) {
-            statusHtml = `<span class="status-badge status-reveal">Reveal Phase</span>`
-            status = 'reveal';
-            commitDisabled = 'disabled';
-            commitDisabledClass = 'button-disabled';
-            resultsBadge = '📊 Live Results';
-        } else {
-            statusHtml = `<span class="status-badge status-ended">🏁 Ended</span>`
-            status = 'ended';
-            resultsBadge = '🏆 Final Results';
+function renderRound(roundData) {
+    const now = Math.floor(Date.now() / 1000);
+    let roundId = roundData.id;
+    let roundDetails = roundData.roundDetails;
+    let optionsRaw = roundData.optionsRaw;
+    let results = roundData.results;
+    let status = '';
+    let resultsBadge = '';
+    let commitDisabled = '';
+    let revealDisabled = '';
+    let commitDisabledClass = '';
+    let revealDisabledClass = '';
+
+    if (now < roundDetails.startTime) {
+        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}"></span>`;
+        status = 'waiting';
+        commitDisabled = 'disabled';
+        revealDisabled = 'disabled';
+        commitDisabledClass = 'button-disabled';
+        revealDisabledClass = 'button-disabled';
+    } else if (now <= roundDetails.commitmentEndTime) {
+        statusHtml = `<span class="status-badge status-commit">Commit Phase</span>`
+        status = 'commit';
+        revealDisabled = 'disabled';
+        revealDisabledClass = 'button-disabled';
+    } else if (now <= roundDetails.revealEndTime) {
+        statusHtml = `<span class="status-badge status-reveal">Reveal Phase</span>`
+        status = 'reveal';
+        commitDisabled = 'disabled';
+        commitDisabledClass = 'button-disabled';
+        resultsBadge = '📊 Live Results';
+    } else {
+        statusHtml = `<span class="status-badge status-ended">🏁 Ended</span>`
+        status = 'ended';
+        resultsBadge = '🏆 Final Results';
+    }
+
+    let selectHtml = '<option value="" disabled selected>Select Option</option>';
+
+    let resultsHtml = '';
+    for (let opt of optionsRaw) {
+        let text;
+        try {
+            text = ethers.utils.parseBytes32String(opt);
+        } catch (error) {
+            text = opt;
         }
 
-        let selectHtml = '<option value="" disabled selected>Select Option</option>';
+        selectHtml += `<option value="${text}">${text}</option>`;
+        resultsHtml += `<div class="result-row"><span>${text}</span><b>${results[opt]}</b></div>`;
+    };
 
-        let resultsHtml = '';
-        for (const optionsHex of optionsRaw) {
-            let text;
-            try {
-                text = ethers.utils.parseBytes32String(optionsHex);
-            } catch (error) {
-                text = optionsHex;
-            }
-
-            selectHtml += `<option value="${text}">${text}</option>`;
-            if (status === 'reveal' || status === 'ended') {
-                let count = await contract.votes(i, optionsHex);
-                resultsHtml += `<div class="result-row"><span>${text}</span><b>${count}</b></div>`;
-            }
-        };
-
-        const resultsSectionHtml = (status === 'reveal' || status === 'ended') ?
-            `<div class="results-box"><span class="info-label">${resultsBadge}</span>${resultsHtml}</div>` : '';
-        const selectSectionHtml = (status != 'ended') ? 
-            `<label class="info-label">Your Vote</label>
-            <select id="vote-select-${i}" class="vote-select">${selectHtml}</select >` : '';
-        const buttonSectionHtml = (status != 'ended') ? 
+    const resultsSectionHtml = (status === 'reveal' || status === 'ended') ?
+        `<div class="results-box"><span class="info-label">${resultsBadge}</span>${resultsHtml}</div>` : '';
+    const selectSectionHtml = (status != 'ended') ?
+        `<label class="info-label">Your Vote</label>
+            <select id="vote-select-${roundId}" class="vote-select">${selectHtml}</select >` : '';
+    const buttonSectionHtml = (status != 'ended') ?
         `<div class="button-section">
-            <button class="button ${commitDisabledClass}" onclick="commit(${i})" ${commitDisabled}>Commit</button>
-            <button class="button ${revealDisabledClass}" onclick="reveal(${i})" ${revealDisabled}>Reveal</button>
+            <button class="button ${commitDisabledClass}" onclick="commit(${roundId})" ${commitDisabled}>Commit</button>
+            <button class="button ${revealDisabledClass}" onclick="reveal(${roundId})" ${revealDisabled}>Reveal</button>
         </div>` : '';
 
 
-        const html = `
+    const html = `
         <div class="card">
             <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
-                <div class="card-title">Round #${i}</div>
+                <div class="card-title">Round #${roundId}</div>
                 ${statusHtml}
                 <label class="arrow">▼</label>
             </div>
@@ -246,10 +266,16 @@ async function getRounds() {
             </div>
         </div>`;
 
-        roundsContainer.insertAdjacentHTML('beforeend', html);
-        if (roundsContainer.children.length == 1) {
-            roundsContainer.getElementsByClassName('card')[0].classList.toggle('open');
-        }
+    roundsContainer.insertAdjacentHTML('beforeend', html);
+    if (roundsContainer.children.length == 1) {
+        roundsContainer.getElementsByClassName('card')[0].classList.toggle('open');
+    }
+}
+
+function renderRounds() {
+    roundsContainer.innerHTML = "";
+    for (let roundData of cachedRoundsData) {
+        renderRound(roundData);
     }
 }
 
@@ -262,6 +288,7 @@ function updateCountdowns() {
         const diff = target - now;
         if (diff <= 0) {
             timer.innerHTML = "Starting...";
+            renderRounds();
         } else {
             const d = Math.floor(diff / (3600 * 24));
             const h = Math.floor((diff % (3600 * 24)) / 3600);
@@ -314,7 +341,7 @@ async function addRound() {
         addMandatoryOptionInput();
         addMandatoryOptionInput();
         console.log('Round added')
-        await getRounds();
+        await fetchRound();
     }
     catch (e) {
         console.error(e);

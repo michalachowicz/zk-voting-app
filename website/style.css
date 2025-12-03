@@ -345,6 +345,33 @@
         background: #6B7280;
     }
 
+    #toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .toast {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: var(--button-radius);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #000000;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .toast.success {
+        border-left-color: #10B981;
+    }
+
+    .toast.error {
+        border-left-color: #EF4444;
+    }
+
     @keyframes slideDown {
         from {
             opacity: 0;
@@ -354,5 +381,17 @@
         to {
             opacity: 1;
             transform: translateY(0) scaleY(1);
+        }
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
         }
     }

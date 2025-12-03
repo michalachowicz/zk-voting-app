@@ -13,36 +13,43 @@ async function switchToArbitrum() {
 }
 
 async function logIn() {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    await switchToArbitrum();
+    try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        await switchToArbitrum();
 
-    signer = await provider.getSigner();
-    const signature = await signer.signMessage(LOGIN_MESSAGE);
-    userSecret = window.poseidon([signature]);
-    userSecret = window.poseidon.F.toObject(userSecret);
-    userId = window.poseidon([userSecret]);
-    userId = window.poseidon.F.toObject(userId);
-    userId = ethers.utils.hexZeroPad("0x" + userId.toString(16), 32);
+        signer = await provider.getSigner();
+        const signature = await signer.signMessage(LOGIN_MESSAGE);
+        userSecret = window.poseidon([signature]);
+        userSecret = window.poseidon.F.toObject(userSecret);
+        userId = window.poseidon([userSecret]);
+        userId = window.poseidon.F.toObject(userId);
+        userId = ethers.utils.hexZeroPad("0x" + userId.toString(16), 32);
 
-    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-    console.log('signature: ', signature);
-    console.log("secret: ", userSecret);
-    console.log("ID: ", userId)
-    console.log(contract.address);
-    const owner = await contract.owner();
-    console.log(owner);
+        console.log('signature: ', signature);
+        console.log("secret: ", userSecret);
+        console.log("ID: ", userId)
+        console.log(contract.address);
+        const owner = await contract.owner();
+        console.log(owner);
 
-    const address = await signer.getAddress();
+        const address = await signer.getAddress();
 
-    connectButton.style.display = 'none';
-    addressBox.style.display = "block";
-    addressBox.innerText = address.slice(0, 6) + "..." + address.slice(-4);
-    if (address == owner) {
-        generateAddRoundBox();
+        connectButton.style.display = 'none';
+        addressBox.style.display = "block";
+        addressBox.innerText = address.slice(0, 6) + "..." + address.slice(-4);
+        if (address == owner) {
+            generateAddRoundBox();
+        }
+        showToast("Logged in successfully!");
+        await getRounds();
     }
-    await getRounds();
+    catch (e) {
+        console.error(e);
+        showToast(e.message, 'error');
+    }
 }
 
 function generateAddRoundBox() {
@@ -240,37 +247,60 @@ async function getRounds() {
         </div>`;
 
         roundsContainer.insertAdjacentHTML('beforeend', html);
+        if (roundsContainer.children.length == 1) {
+            roundsContainer.getElementsByClassName('card')[0].classList.toggle('open');
+        }
     }
 }
 
 async function addRound() {
-    const startTime = document.getElementById('startTime');
-    const commitEndTime = document.getElementById('commitEndTime');
-    const revealEndTime = document.getElementById('revealEndTime');
-    const merkleRoot = document.getElementById('merkleRoot');
-    const optionInputs = document.querySelectorAll('.option-input');
-    
-    const startTimestamp = Math.floor(new Date(startTime.value).getTime() / 1000);
-    const commitEndTimestamp = Math.floor(new Date(commitEndTime.value).getTime() / 1000);
-    const revealEndTimestamp = Math.floor(new Date(revealEndTime.value).getTime() / 1000);
+    try {
+        const startTime = document.getElementById('startTime');
+        const commitEndTime = document.getElementById('commitEndTime');
+        const revealEndTime = document.getElementById('revealEndTime');
+        const merkleRoot = document.getElementById('merkleRoot');
+        const optionInputs = document.querySelectorAll('.option-input');
 
-    const options = [];
-    optionInputs.forEach(option => {
-        if (option.value.trim() !== "") {
-            options.push(option.value.trim());
+        if (startTime.value == '' || commitEndTime.value == '' || revealEndTime.value == '')
+            throw new Error('All date fields are required!');
+        if (!ethers.utils.isHexString(merkleRoot.value, 32)) {
+            throw new Error("Invalid Merkle Root! It must be a 32-byte Hex string");
         }
-    });
-    const options_hex = options.map(option => ethers.utils.formatBytes32String(option));
+        
+        const startTimestamp = Math.floor(new Date(startTime.value).getTime() / 1000);
+        const commitEndTimestamp = Math.floor(new Date(commitEndTime.value).getTime() / 1000);
+        const revealEndTimestamp = Math.floor(new Date(revealEndTime.value).getTime() / 1000);
 
-    await contract.functions.addRound(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, options_hex);
-    startTime.value = '';
-    commitEndTime.value = '';
-    revealEndTime.value = '';
-    merkleRoot.value = '';
-    document.getElementById('optionsContainer').innerHTML = '';
-    addMandatoryOptionInput();
-    addMandatoryOptionInput();
-    console.log('Round added')
+        const options = [];
+        optionInputs.forEach(option => {
+            if (option.value.trim() !== "") {
+                options.push(option.value.trim());
+            }
+        });
+        const options_hex = options.map(option => ethers.utils.formatBytes32String(option));
+
+        const tx = await contract.functions.addRound(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, options_hex);
+        showToast("Transaction sent...", "success");
+        const receipt = await tx.wait();
+        if (receipt.status === 1)
+            showToast("Round added successfully!", "success");
+        else
+            showToast("Transaction failed!", "Error");
+
+        startTime.value = '';
+        commitEndTime.value = '';
+        revealEndTime.value = '';
+        merkleRoot.value = '';
+        document.getElementById('optionsContainer').innerHTML = '';
+        addMandatoryOptionInput();
+        addMandatoryOptionInput();
+        console.log('Round added')
+        await getRounds();
+    }
+    catch (e) {
+        console.error(e);
+        showToast(e.reason || e.message, "error");
+    }
 }
 
 async function findMerklePath() {
@@ -284,6 +314,7 @@ async function findMerklePath() {
     const merkleTree = text.split('\n');
     console.log(merkleTree);
     const indentifierIndex = merkleTree.findIndex(value => value === userId);
+    if (indentifierIndex == -1) throw new Error('User is not eligible to vote!')
     console.log(indentifierIndex);
     let path = [];
     let sides = [];
@@ -303,61 +334,95 @@ async function findMerklePath() {
 }
 
 async function commit(roundId) {
-    const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
-    if (optionText == '') throw Error('You have to choose the option!');
-    const option = ethers.utils.formatBytes32String(optionText);
-    let nullifier = window.poseidon([userSecret, roundId]);
-    nullifier = window.poseidon.F.toObject(nullifier);
-    nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
-    const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
-    const hashedSalt = ethers.utils.keccak256(salt);
-    const commitmentEncoded = ethers.utils.defaultAbiCoder.encode(
-        ["bytes32", "bytes32", "uint", "bytes32"], [option, nullifier, roundId, hashedSalt]
-    )
-    const commitmentHashed = ethers.utils.keccak256(commitmentEncoded);
-    console.log(commitmentHashed);
-    const commitment = BigInt(commitmentHashed) % P;
-    const nonce = await contract.nonces(roundId, nullifier);
-    const { path, sides } = await findMerklePath();
-    console.log(path);
-    console.log(sides);
-    const input = {
-        secret: userSecret.toString(),
-        siblings: path,
-        sides: sides,
-        commitment: commitment,
-        roundId: roundId.toString(),
-        nonce: nonce.toString()
-    };
-    const commitmentHex = ethers.utils.hexZeroPad("0x" + commitment.toString(16), 32);
-    console.log("secret: ", userSecret.toString());
-    console.log("path: ", path);
-    console.log("sides: ", sides);
-    console.log("commitment: ", commitmentHex);
-    console.log("roundId: ", roundId.toString());
-    console.log("nonce: ", nonce.toString());
-    const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, "voting.wasm", "voting_final.zkey");
-    console.log("public: ", publicSignals);
-    const pA = proof.pi_a.slice(0, 2);
-    const pB = [
-        [proof.pi_b[0][1], proof.pi_b[0][0]],
-        [proof.pi_b[1][1], proof.pi_b[1][0]]
-    ];
-    const pC = proof.pi_c.slice(0, 2);
+    try {
+        const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
+        if (optionText == '') throw new Error('You have to choose the option!');
+        const { path, sides } = await findMerklePath();
+        console.log(path);
+        console.log(sides);
+        const option = ethers.utils.formatBytes32String(optionText);
+        let nullifier = window.poseidon([userSecret, roundId]);
+        nullifier = window.poseidon.F.toObject(nullifier);
+        nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
+        const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
+        const hashedSalt = ethers.utils.keccak256(salt);
+        const commitmentEncoded = ethers.utils.defaultAbiCoder.encode(
+            ["bytes32", "bytes32", "uint", "bytes32"], [option, nullifier, roundId, hashedSalt]
+        )
+        const commitmentHashed = ethers.utils.keccak256(commitmentEncoded);
+        console.log(commitmentHashed);
+        const commitment = BigInt(commitmentHashed) % P;
+        const nonce = await contract.nonces(roundId, nullifier);
+        const input = {
+            secret: userSecret.toString(),
+            siblings: path,
+            sides: sides,
+            commitment: commitment,
+            roundId: roundId.toString(),
+            nonce: nonce.toString()
+        };
+        const commitmentHex = ethers.utils.hexZeroPad("0x" + commitment.toString(16), 32);
+        console.log("secret: ", userSecret.toString());
+        console.log("path: ", path);
+        console.log("sides: ", sides);
+        console.log("commitment: ", commitmentHex);
+        console.log("roundId: ", roundId.toString());
+        console.log("nonce: ", nonce.toString());
+        const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, "voting.wasm", "voting_final.zkey");
+        console.log("public: ", publicSignals);
+        const pA = proof.pi_a.slice(0, 2);
+        const pB = [
+            [proof.pi_b[0][1], proof.pi_b[0][0]],
+            [proof.pi_b[1][1], proof.pi_b[1][0]]
+        ];
+        const pC = proof.pi_c.slice(0, 2);
 
-    console.log("nullifier: ", nullifier);
-    await contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, roundId.toString(), nonce.toString());
+        console.log("nullifier: ", nullifier);
+        const tx = await contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, roundId.toString(), nonce.toString());
+        showToast("Transaction sent...", "success");
+        const receipt = await tx.wait();
+        if (receipt.status === 1)
+            showToast("Vote commited successfully!", "success");
+        else
+            showToast("Transaction failed!", "Error");
+    }
+    catch (e) {
+        console.error(e);
+        showToast(e.reason || e.message, "error");
+    }
 }
 
 async function reveal(roundId) {
-    const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
-    const option = ethers.utils.formatBytes32String(optionText);
-    let nullifier = window.poseidon([userSecret, roundId]);
-    nullifier = window.poseidon.F.toObject(nullifier);
-    nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
-    const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
-    const hashedSalt = ethers.utils.keccak256(salt);
-    await contract.functions.reveal(option, nullifier, roundId, hashedSalt);
+    try {
+        const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
+        if (optionText == '') throw new Error('You have to choose the option!');
+        const option = ethers.utils.formatBytes32String(optionText);
+        let nullifier = window.poseidon([userSecret, roundId]);
+        nullifier = window.poseidon.F.toObject(nullifier);
+        nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
+        const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
+        const hashedSalt = ethers.utils.keccak256(salt);
+        const tx = await contract.functions.reveal(option, nullifier, roundId, hashedSalt);
+        showToast("Transaction sent...", "success");
+        const receipt = await tx.wait();
+        if (receipt.status === 1)
+            showToast("Vote revealed successfully!", "success");
+        else
+            showToast("Transaction failed!", "Error");
+    }
+    catch (e) {
+        console.error(e);
+        showToast(e.reason || e.message, "error");
+    }
+}
+
+function showToast(msg, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const div = document.createElement('div');
+    div.className = `toast ${type}`;
+    div.innerHTML = `<b>${type === 'success' ? 'Success' : 'Error'}</b><br>${msg}`;
+    container.appendChild(div);
+    setTimeout(() => div.remove(), 4000);
 }
 
 connectButton.addEventListener('click', logIn);

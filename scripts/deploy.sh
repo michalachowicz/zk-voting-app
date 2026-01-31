@@ -2,7 +2,7 @@
 
 set -e
 
-NETWORK=${1:-localhost}
+NETWORK=${1:-arbitrumOne}
 
 if [ ! -f "contracts/verifier.sol" ]; then
     echo "File 'contracts/cerifier.sol' not found."

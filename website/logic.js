@@ -477,8 +477,8 @@ async function addVoting() {
     }
 }
 
-async function findMerklePath() {
-    const response = await fetch('merkle_tree.txt');
+async function findMerklePath(votingId) {
+    const response = await fetch(`merkle_tree_${votingId}.txt`);
 
     if (!response.ok) {
         throw new Error("No file with Merkle Tree found!");
@@ -513,7 +513,7 @@ async function commit(votingId) {
     try {
         const optionText = document.getElementById(`vote-select-${votingId}`).value.trim();
         if (optionText == '') throw new Error('You have to choose the option!');
-        const { path, sides } = await findMerklePath();
+        const { path, sides } = await findMerklePath(votingId);
         console.log(path);
         console.log(sides);
         const option = ethers.utils.formatBytes32String(optionText);

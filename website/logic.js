@@ -20,7 +20,7 @@ async function switchToArbitrum() {
     });
 }
 
-window.copyUserId = async function () {
+async function copyUserId() {
     if (!userId) return;
     try {
         await navigator.clipboard.writeText(userId);
@@ -65,13 +65,6 @@ async function logIn() {
 
         contract = new ethers.Contract(contractAddress, abi, signer);
 
-        console.log('signature: ', signature);
-        console.log("secret: ", userSecret);
-        console.log("ID: ", userId)
-        console.log(contract.address);
-        const owner = await contract.owner();
-        console.log(owner);
-
         const address = await signer.getAddress();
 
         connectButton.style.display = 'none';
@@ -79,6 +72,8 @@ async function logIn() {
         addressBox.innerText = address.slice(0, 6) + "..." + address.slice(-4);
         userIdBox.style.display = "block";
         userIdDisplay.innerText = userId.slice(0, 6) + "..." + userId.slice(-4);
+
+        const owner = await contract.owner();
         if (address == owner) {
             generateAddVotingBox();
         }
@@ -217,7 +212,6 @@ async function fetchProposals() {
             firstVisibleCard.classList.add('open');
         }
     }
-    console.log(cachedVotingsData);
 }
 
 async function fetchNewestVoting() {
@@ -369,7 +363,7 @@ function generateVotingHtml(votingData) {
     return [html, hidden];
 }
 
-function renderVoting(votingData, open=false) {
+function renderVoting(votingData) {
     const [ votingHtml, hidden ] = generateVotingHtml(votingData);
     const html = `
         <div id="card${votingData.id}" class="card ${hidden}" data-id="${votingData.id}">
@@ -463,7 +457,6 @@ async function addVoting() {
             document.getElementById('optionsContainer').innerHTML = '';
             addMandatoryOptionInput();
             addMandatoryOptionInput();
-            console.log('Voting added');
             await fetchNewestVoting();
         }
         else
@@ -483,13 +476,10 @@ async function findMerklePath(votingId) {
     if (!response.ok) {
         throw new Error("No file with Merkle Tree found!");
     }
-    const t0 = performance.now();
     const text = await response.text();
     const merkleTree = text.split('\n');
-    console.log(merkleTree);
     const indentifierIndex = merkleTree.findIndex(value => value === userId);
     if (indentifierIndex == -1) throw new Error('User is not eligible to vote!')
-    console.log(indentifierIndex);
     let path = [];
     let sides = [];
     let currentIndex = indentifierIndex;
@@ -504,8 +494,6 @@ async function findMerklePath(votingId) {
         }
         currentIndex = Math.floor((currentIndex - 1) / 2);
     }
-    const t1 = performance.now();
-    console.log(`Czas szukania ścieżki: ${t1-t0} ms`)
     return { path, sides };
 }
 
@@ -514,8 +502,6 @@ async function commit(votingId) {
         const optionText = document.getElementById(`vote-select-${votingId}`).value.trim();
         if (optionText == '') throw new Error('You have to choose the option!');
         const { path, sides } = await findMerklePath(votingId);
-        console.log(path);
-        console.log(sides);
         const option = ethers.utils.formatBytes32String(optionText);
         let nullifier = window.poseidon([userSecret, votingId]);
         nullifier = window.poseidon.F.toObject(nullifier);
@@ -528,7 +514,6 @@ async function commit(votingId) {
             ["bytes32", "bytes32"], [option, hashedSalt]
         )
         const commitmentHashed = ethers.utils.keccak256(commitmentEncoded);
-        console.log(commitmentHashed);
         const commitment = BigInt(commitmentHashed) % P;
         
         const input = {
@@ -540,17 +525,8 @@ async function commit(votingId) {
             nonce: nonce.toString()
         };
         const commitmentHex = ethers.utils.hexZeroPad("0x" + commitment.toString(16), 32);
-        console.log("secret: ", userSecret.toString());
-        console.log("path: ", path);
-        console.log("sides: ", sides);
-        console.log("commitment: ", commitmentHex);
-        console.log("votingId: ", votingId.toString());
-        console.log("nonce: ", nonce.toString());
-        const t0 = performance.now()
+            
         const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, "voting.wasm", "voting_final.zkey");
-        const t1 = performance.now()
-        console.log(`Generowanie dowodu: ${t1-t0} ms`)
-        console.log("public: ", publicSignals);
         const pA = proof.pi_a.slice(0, 2);
         const pB = [
             [proof.pi_b[0][1], proof.pi_b[0][0]],
@@ -558,7 +534,6 @@ async function commit(votingId) {
         ];
         const pC = proof.pi_c.slice(0, 2);
 
-        console.log("nullifier: ", nullifier);
         const tx = await contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, votingId.toString(), nonce.toString());
         showToast("Transaction sent...", "success");
         const receipt = await tx.wait();
@@ -623,4 +598,3 @@ filterButtonWaiting.addEventListener('click', () => { setFilter("Waiting") });
 filterButtonCommit.addEventListener('click', () => { setFilter("Commit") });
 filterButtonReveal.addEventListener('click', () => { setFilter("Reveal") });
 filterButtonEnded.addEventListener('click', () => { setFilter("Ended") });
-

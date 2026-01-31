@@ -111,22 +111,14 @@ W katalogu głównym projektu utwórz plik `.env`:
 
 Uzupełnij go zgodnie z poniższym przykładem:
 
+```txt
 ARBITRUM_SEPOLIA_RPC_URL='https://sepolia-rollup.arbitrum.io/rpc'
 ARBITRUM_RPC_URL='https://arb1.arbitrum.io/rpc'
 PRIVATE_KEY=''
 ETHERSCAN_API_KEY=''
-
-ETHERSCAN_API_KEY jest opcjonalne i śłuży do weryfikacji kodu kontraktów w Arbiscan
-
-### 7.2 Plik `leafs.txt`
-
-Utwórz plik:
-
-```bash
-touch leafs.txt
 ```
 
-Plik powinien zawierać identyfikatory uzytkowników do generowanie drzewa Merkle (każdy identyfikator w nowej linii, bez przecinków, kropek i innych zanków odzielających)
+ETHERSCAN_API_KEY jest opcjonalne i śłuży do weryfikacji kodu kontraktów w Arbiscan
 
 ---
 
@@ -158,7 +150,19 @@ Aplikacja powinna być dostępna pod adresem
 
 ## 11. Generowanie drzewa przed dodaniem rundy głosowania
 
-⚠️ **Przed dodaniem nowej rundy głosowania należy wygenerować drzewo Merkle**
+**Przed dodaniem nowej rundy głosowania należy wygenerować drzewo Merkle**
+
+Do wygenerowania drzewa niezbędne jest wpisanie identyfikatorów użytkowników do pliku ./inputs/leafs.txt
+Każdy identyfikator użytkownika musi być w nowej linii, bez znaków odzielających
+zgodnie z poniższym przykładem:
+
+```txt
+0x2a73ab2d2bd3c65c2a5402c33f8443af7bf3722e2c5e7ac07a2b0fcdd7d1ef87
+0x029378c7f52c8f1241417fd2592bc17074e1d25ac6ddacc293696cee553d6c92
+0x07f9d837cb17b0d36320ffe93ba52345f1b728571a568265caac97559dbc952a
+0x05f6b6f121c2ac4f1ed9230109adba16bfae1d6f93d49ef01a042707ef6220fd
+0x2a2490f35995ec9a8bafa5aa99e0a0125de1af86641616c2516bd515e4f26abb
+```
 
 ```bash
 npm run gen-tree $votingId

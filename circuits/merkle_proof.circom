@@ -2,56 +2,56 @@ pragma circom 2.0.0;
 
 include "poseidon.circom";
 
-template OneLevelVerifier() {
+template OneLevelHasher() {
 
     signal input currentHash;
-    signal input sibling;
-    signal input side;
+    signal input pathElement;
+    signal input pathIndicator;
 
-    signal output root;
+    signal output result;
 
-    component leaf_hasher = Poseidon(2);
+    component hasher = Poseidon(2);
 
-    side * (side-1) === 0;
+    pathIndicator * (pathIndicator-1) === 0;
 
-    leaf_hasher.inputs[0] <== currentHash + side * (sibling - currentHash);
-    leaf_hasher.inputs[1] <== sibling + side * (currentHash - sibling);
+    hasher.inputs[0] <== currentHash + pathIndicator * (pathElement - currentHash);
+    hasher.inputs[1] <== pathElement + pathIndicator * (currentHash - pathElement);
 
-    root <== leaf_hasher.out;
+    result <== hasher.out;
 }
 
 template VerifyMerkleTree(levels) {
     signal input secret;
-    signal input siblings[levels];
-    signal input sides[levels];
+    signal input pathElements[levels];
+    signal input pathIndicators[levels];
     signal input commitment;
-    signal input roundId;
+    signal input votingId;
     signal input nonce;
 
     signal output root;
     signal output nullifier;
 
-    component nullifier_hasher = Poseidon(2);
-    nullifier_hasher.inputs[0] <== secret;
-    nullifier_hasher.inputs[1] <== roundId;
-    nullifier <== nullifier_hasher.out;
+    component nullifierHasher = Poseidon(2);
+    nullifierHasher.inputs[0] <== secret;
+    nullifierHasher.inputs[1] <== votingId;
+    nullifier <== nullifierHasher.out;
 
-    component leaf_hasher = Poseidon(1);
-    leaf_hasher.inputs[0] <== secret;
+    component leafHasher = Poseidon(1);
+    leafHasher.inputs[0] <== secret;
 
-    component h[levels];
+    component hashers[levels];
     signal currentHash[levels+1];
 
-    currentHash[0] <== leaf_hasher.out;
+    currentHash[0] <== leafHasher.out;
 
     for (var i = 0; i < levels; i++){
-        h[i] = OneLevelVerifier();
-        h[i].currentHash <== currentHash[i];
-        h[i].sibling <== siblings[i];
-        h[i].side <== sides[i];
-        currentHash[i+1] <== h[i].root;
+        hashers[i] = OneLevelHasher();
+        hashers[i].currentHash <== currentHash[i];
+        hashers[i].pathElement <== pathElements[i];
+        hashers[i].pathIndicator <== pathIndicators[i];
+        currentHash[i+1] <== hashers[i].result;
     }
     root <== currentHash[levels];
 }
 
-component main { public [commitment, roundId, nonce] } = VerifyMerkleTree(3);
+component main { public [commitment, votingId, nonce] } = VerifyMerkleTree(3);

@@ -1,7 +1,9 @@
 const connectButton = document.getElementById('connectButton');
 const addressBox = document.getElementById('addressBox');
-const addRoundContainer = document.getElementById('addRoundContainer');
-const roundsContainer = document.getElementById('roundsContainer');
+const userIdBox = document.getElementById('userIdBox');
+const userIdDisplay = document.getElementById('userIdDisplay');
+const addVotingContainer = document.getElementById('addVotingContainer');
+const votingsContainer = document.getElementById('votingsContainer');
 const filterContainer = document.getElementById('filter-container')
 const filterButtonAll = document.getElementById('buttonFilterAll');
 const filterButtonWaiting = document.getElementById('buttonFilterWaiting');
@@ -9,7 +11,7 @@ const filterButtonCommit = document.getElementById('buttonFilterCommit');
 const filterButtonReveal = document.getElementById('buttonFilterReveal');
 const filterButtonEnded = document.getElementById('buttonFilterEnded');
 
-let provider, signer, contract, userSecret, userId, cachedRoundsData = [], filterStatus = "All";
+let contractAddress, abi, provider, signer, contract, userSecret, userId, cachedVotingsData = [], filterStatus = "All";
 
 async function switchToArbitrum() {
     await window.ethereum.request({
@@ -18,8 +20,37 @@ async function switchToArbitrum() {
     });
 }
 
+window.copyUserId = async function () {
+    if (!userId) return;
+    try {
+        await navigator.clipboard.writeText(userId);
+        showToast("User ID copied!", "success");
+    } catch (err) {
+        console.error(e);
+        showToast("e", "error");
+    }
+};
+
+async function loadContractData() {
+    const [configRes, abiRes] = await Promise.all([
+        fetch(`./config.json`),
+        fetch(`./abi.json`),
+    ]);
+
+    const config = await configRes.json();
+    const abi = await abiRes.json();
+
+    return {
+        address: config.votingAddress,
+        abi: abi
+    };
+}
+
 async function logIn() {
     try {
+        const data = await loadContractData();
+        contractAddress = data.address;
+        abi = data.abi;
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         await switchToArbitrum();
@@ -32,7 +63,7 @@ async function logIn() {
         userId = window.poseidon.F.toObject(userId);
         userId = ethers.utils.hexZeroPad("0x" + userId.toString(16), 32);
 
-        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        contract = new ethers.Contract(contractAddress, abi, signer);
 
         console.log('signature: ', signature);
         console.log("secret: ", userSecret);
@@ -46,11 +77,13 @@ async function logIn() {
         connectButton.style.display = 'none';
         addressBox.style.display = "block";
         addressBox.innerText = address.slice(0, 6) + "..." + address.slice(-4);
+        userIdBox.style.display = "block";
+        userIdDisplay.innerText = userId.slice(0, 6) + "..." + userId.slice(-4);
         if (address == owner) {
-            generateAddRoundBox();
+            generateAddVotingBox();
         }
         showToast("Logged in successfully!");
-        await fetchRounds();
+        await fetchProposals();
     }
     catch (e) {
         console.error(e);
@@ -58,7 +91,7 @@ async function logIn() {
     }
 }
 
-function generateAddRoundBox() {
+function generateAddVotingBox() {
     const html = `
     <div class="card card-admin open">
         <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
@@ -89,18 +122,23 @@ function generateAddRoundBox() {
                 </div>
 
                 <div class="input-group full-width">
+                    <label class="info-label">Voting Question</label><br>
+                    <input type="text" id="question" placeholder="Question">
+                </div>
+
+                <div class="input-group full-width">
                     <label class="info-label">Voting Options</label><br>
                     <div id="optionsContainer" class="options-container"></div>
                     <button id="addOptionButton" class="button-addOption">+ Add Option</button>
                 </div>
 
             </div>
-            <button id="addRoundButton" class="button">Add Round</button>
+            <button id="addVotingButton" class="button">Add Voting</button>
         </div>
     </div>`
 
-    addRoundContainer.insertAdjacentHTML("afterbegin", html);
-    addRoundButton.addEventListener('click', addRound);
+    addVotingContainer.insertAdjacentHTML("afterbegin", html);
+    addVotingButton.addEventListener('click', addVoting);
     addOptionButton.addEventListener('click', addOptionInput);
 
     flatpickr(".date-picker", {
@@ -153,79 +191,79 @@ function formatTimestamp(timestamp) {
     return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
 }
 
-async function fetchRounds() {
+async function fetchProposals() {
     const now = Math.floor(Date.now() / 1000);
-    const roundsCount = await contract.roundsCount();
-    roundsContainer.innerHTML = "";
+    const votingsCount = await contract.votingsCount();
+    votingsContainer.innerHTML = "";
 
-    for (let i = roundsCount - 1; i >= 0; i--) {
-        let [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(i), contract.getOptions(i)]);
+    for (let i = votingsCount - 1; i >= 0; i--) {
+        let [votingDetails, optionsRaw] = await Promise.all([contract.votingDetails(i), contract.getOptions(i)]);
         let results = {};
-        if (now > roundDetails.commitmentEndTime) {}
+        if (now > votingDetails.commitmentEndTime) {}
             for (const opt of optionsRaw) {
                 let count = await contract.votes(i, opt);
                 results[opt] = count;
         };
-        let roundData = {
+        let votingData = {
             id: i,
-            roundDetails: roundDetails,
+            votingDetails: votingDetails,
             optionsRaw: optionsRaw,
             results: results
         }
-        cachedRoundsData.push(roundData);
-        renderRound(roundData);
-        if (i == roundsCount - 1) {
-            const firstVisibleCard = roundsContainer.querySelector('.card');
+        cachedVotingsData.push(votingData);
+        renderVoting(votingData);
+        if (i == votingsCount - 1) {
+            const firstVisibleCard = votingsContainer.querySelector('.card');
             firstVisibleCard.classList.add('open');
         }
     }
-    console.log(cachedRoundsData);
+    console.log(cachedVotingsData);
 }
 
-async function fetchNewestRound() {
-    const roundId = await contract.roundsCount() - 1;
+async function fetchNewestVoting() {
+    const votingId = await contract.votingsCount() - 1;
     let results = {};
-    const [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(roundId), contract.getOptions(roundId)]);
+    const [votingDetails, optionsRaw] = await Promise.all([contract.votingDetails(votingId), contract.getOptions(votingId)]);
     for (const opt of optionsRaw) {
         results[opt] = 0;
     };
-    const roundData = {
-        id: roundId,
-        roundDetails: roundDetails,
+    const votingData = {
+        id: votingId,
+        votingDetails: votingDetails,
         optionsRaw: optionsRaw,
         results: results
     }
-    cachedRoundsData.unshift(roundData);
-    renderRounds();
+    cachedVotingsData.unshift(votingData);
+    renderVotings();
 }
 
-async function refreshRound(roundId) {
-    const [roundDetails, optionsRaw] = await Promise.all([contract.roundDetails(roundId), contract.getOptions(roundId)]);
+async function refreshVoting(votingId) {
+    const [votingDetails, optionsRaw] = await Promise.all([contract.votingDetails(votingId), contract.getOptions(votingId)]);
     results = {};
     for (const opt of optionsRaw) {
-        let count = await contract.votes(roundId, opt);
+        let count = await contract.votes(votingId, opt);
         results[opt] = count;
     }
-    const roundData = {
-        id: roundId,
-        roundDetails: roundDetails,
+    const votingData = {
+        id: votingId,
+        votingDetails: votingDetails,
         optionsRaw: optionsRaw,
         results: results
     }
-    const index = cachedRoundsData.findIndex(value => value.id === roundId);
-    cachedRoundsData[index] = roundData;
-    const html = generateRoundHtml(roundData);
-    const roundCard = document.getElementById(`card${roundId}`)
-    roundCard.innerHTML = html;
-    showToast(`Round ${roundId} refreshed!`)
+    const index = cachedVotingsData.findIndex(value => value.id === votingId);
+    cachedVotingsData[index] = votingData;
+    const html = generateVotingHtml(votingData);
+    const votingCard = document.getElementById(`card${votingId}`)
+    votingCard.innerHTML = html;
+    showToast(`Proposal ${votingId} refreshed!`)
 }
 
-function generateRoundHtml(roundData) {
+function generateVotingHtml(votingData) {
     const now = Math.floor(Date.now() / 1000);
-    let roundId = roundData.id;
-    let roundDetails = roundData.roundDetails;
-    let optionsRaw = roundData.optionsRaw;
-    let results = roundData.results;
+    let votingId = votingData.id;
+    let votingDetails = votingData.votingDetails;
+    let optionsRaw = votingData.optionsRaw;
+    let results = votingData.results;
     let status = '';
     let resultsBadge = '';
     let commitDisabled = '';
@@ -233,20 +271,20 @@ function generateRoundHtml(roundData) {
     let commitDisabledClass = '';
     let revealDisabledClass = '';
 
-    if (now < roundDetails.startTime) {
-        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${roundDetails.startTime}" data-text="Starts">Waiting...</span>`;
+    if (now < votingDetails.startTime) {
+        statusHtml = `<span class="countdown-timer status-badge status-waiting" data-target="${votingDetails.startTime}" data-text="Starts">Waiting...</span>`;
         status = 'Waiting';
         commitDisabled = 'disabled';
         revealDisabled = 'disabled';
         commitDisabledClass = 'button-disabled';
         revealDisabledClass = 'button-disabled';
-    } else if (now <= roundDetails.commitmentEndTime) {
-        statusHtml = `<span class="countdown-timer status-badge status-commit" data-target="${roundDetails.commitmentEndTime}" data-text="Commit ends">Waiting...</span>`;
+    } else if (now <= votingDetails.commitmentEndTime) {
+        statusHtml = `<span class="countdown-timer status-badge status-commit" data-target="${votingDetails.commitmentEndTime}" data-text="Commit ends">Waiting...</span>`;
         status = 'Commit';
         revealDisabled = 'disabled';
         revealDisabledClass = 'button-disabled';
-    } else if (now <= roundDetails.revealEndTime) {
-        statusHtml = `<span class="countdown-timer status-badge status-reveal" data-target="${roundDetails.revealEndTime}" data-text="Reveal ends">Waiting...</span>`;
+    } else if (now <= votingDetails.revealEndTime) {
+        statusHtml = `<span class="countdown-timer status-badge status-reveal" data-target="${votingDetails.revealEndTime}" data-text="Reveal ends">Waiting...</span>`;
         status = 'Reveal';
         commitDisabled = 'disabled';
         commitDisabledClass = 'button-disabled';
@@ -274,24 +312,24 @@ function generateRoundHtml(roundData) {
 
     const resultsSectionHtml = (status === 'Reveal' || status === 'Ended') ?
         `<div class="results-box"><span class="info-label">${resultsBadge}</span>${resultsHtml}</div>` : '';
-    const selectSectionHtml = (status != 'ended') ?
+    const selectSectionHtml = (status != 'Ended') ?
         `<label class="info-label">Your Vote</label>
-            <select id="vote-select-${roundId}" class="vote-select">${selectHtml}</select >` : '';
-    const buttonSectionHtml = (status != 'ended') ?
+            <select id="vote-select-${votingId}" class="vote-select">${selectHtml}</select >` : '';
+    const buttonSectionHtml = (status != 'Ended') ?
         `<div class="button-section">
-            <button class="button ${commitDisabledClass}" onclick="commit(${roundId})" ${commitDisabled}>Commit</button>
-            <button class="button ${revealDisabledClass}" onclick="reveal(${roundId})" ${revealDisabled}>Reveal</button>
+            <button class="button ${commitDisabledClass}" onclick="commit(${votingId})" ${commitDisabled}>Commit</button>
+            <button class="button ${revealDisabledClass}" onclick="reveal(${votingId})" ${revealDisabled}>Reveal</button>
         </div>` : '';
     const buttonRefresh = (status === 'Reveal') ?
-        `<button class="button-refresh" title="Refresh this round"
-            onclick = "event.stopPropagation(); refreshRound(${roundId})" >
+        `<button class="button-refresh" title="Refresh data"
+            onclick = "event.stopPropagation(); refreshVoting(${votingId})" >
             🔄
         </button > ` : '';
 
 
     const html = `
         <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="card-title">Round #${roundId}</div>
+            <div class="card-title">Proposal #${votingId}</div>
             ${statusHtml}
             <div class="header-actions">
             ${buttonRefresh}
@@ -302,16 +340,21 @@ function generateRoundHtml(roundData) {
             <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">Start</span>
-                    <span class="info-value">${formatTimestamp(roundDetails.startTime)}</span>
+                    <span class="info-value">${formatTimestamp(votingDetails.startTime)}</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Commit End</span>
-                    <span class="info-value">${formatTimestamp(roundDetails.commitmentEndTime)}</span>
+                    <span class="info-value">${formatTimestamp(votingDetails.commitmentEndTime)}</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Reveal End</span>
-                    <span class="info-value">${formatTimestamp(roundDetails.revealEndTime)}</span>
+                    <span class="info-value">${formatTimestamp(votingDetails.revealEndTime)}</span>
                 </div>
+            </div>
+            <div class="question-box">
+                <span class="info-label">Proposal Question</span>
+                <div class="question-text">
+                    ${votingDetails.question} </div>
             </div>
             ${resultsSectionHtml}
             <div class="vote-section">
@@ -326,27 +369,27 @@ function generateRoundHtml(roundData) {
     return [html, hidden];
 }
 
-function renderRound(roundData, open=false) {
-    const [ roundHtml, hidden ] = generateRoundHtml(roundData);
+function renderVoting(votingData, open=false) {
+    const [ votingHtml, hidden ] = generateVotingHtml(votingData);
     const html = `
-        <div id="card${roundData.id}" class="card ${hidden}" data-id="${roundData.id}">
-            ${roundHtml}
+        <div id="card${votingData.id}" class="card ${hidden}" data-id="${votingData.id}">
+            ${votingHtml}
         </div>`;
 
-    roundsContainer.insertAdjacentHTML('beforeend', html);
+    votingsContainer.insertAdjacentHTML('beforeend', html);
 }
 
-function renderRounds() {
-    roundsContainer.innerHTML = "";
-    for (const roundData of cachedRoundsData) {
-        renderRound(roundData);
+function renderVotings() {
+    votingsContainer.innerHTML = "";
+    for (const votingData of cachedVotingsData) {
+        renderVoting(votingData);
     }
-    const firstVisibleCard = roundsContainer.querySelector('.card:not(.hidden)');
+    const firstVisibleCard = votingsContainer.querySelector('.card:not(.hidden)');
 
     if (firstVisibleCard) {
         firstVisibleCard.classList.add('open');
     } else {
-        roundsContainer.innerHTML = '<div class="empty-state">No rounds match filter.</div>';
+        votingsContainer.innerHTML = '<div class="empty-state">No votings match filter.</div>';
     }
 
 }
@@ -360,10 +403,10 @@ function updateCountdowns() {
         const diff = target - now;
         if (diff <= 0) {
             const card = timer.closest('.card');
-            const roundId = parseInt(card.dataset.id);
-            const index = cachedRoundsData.findIndex(value => value.id === roundId);
-            const roundData = cachedRoundsData[index];
-            const [html, hidden] = generateRoundHtml(roundData);
+            const votingId = parseInt(card.dataset.id);
+            const index = cachedVotingsData.findIndex(value => value.id === votingId);
+            const votingData = cachedVotingsData[index];
+            const [html, hidden] = generateVotingHtml(votingData);
             if (hidden == 'hidden')
                 card.classList.add('hidden');
             else
@@ -380,12 +423,13 @@ function updateCountdowns() {
     });
 }
 
-async function addRound() {
+async function addVoting() {
     try {
         const startTime = document.getElementById('startTime');
         const commitEndTime = document.getElementById('commitEndTime');
         const revealEndTime = document.getElementById('revealEndTime');
         const merkleRoot = document.getElementById('merkleRoot');
+        const question = document.getElementById('question');
         const optionInputs = document.querySelectorAll('.option-input');
 
         if (startTime.value == '' || commitEndTime.value == '' || revealEndTime.value == '')
@@ -406,20 +450,21 @@ async function addRound() {
         });
         const options_hex = options.map(option => ethers.utils.formatBytes32String(option));
 
-        const tx = await contract.functions.addRound(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, options_hex);
+        const tx = await contract.functions.addVoting(startTimestamp, commitEndTimestamp, revealEndTimestamp, merkleRoot.value, question.value, options_hex);
         showToast("Transaction sent...", "success");
         const receipt = await tx.wait();
         if (receipt.status === 1) {
-            showToast("Round added successfully!", "success");
+            showToast("Voting added successfully!", "success");
             startTime.value = '';
             commitEndTime.value = '';
             revealEndTime.value = '';
             merkleRoot.value = '';
+            question.value = '';
             document.getElementById('optionsContainer').innerHTML = '';
             addMandatoryOptionInput();
             addMandatoryOptionInput();
-            console.log('Round added');
-            await fetchNewestRound();
+            console.log('Voting added');
+            await fetchNewestVoting();
         }
         else
             showToast("Transaction failed!", "Error");
@@ -438,7 +483,7 @@ async function findMerklePath() {
     if (!response.ok) {
         throw new Error("No file with Merkle Tree found!");
     }
-
+    const t0 = performance.now();
     const text = await response.text();
     const merkleTree = text.split('\n');
     console.log(merkleTree);
@@ -459,35 +504,39 @@ async function findMerklePath() {
         }
         currentIndex = Math.floor((currentIndex - 1) / 2);
     }
+    const t1 = performance.now();
+    console.log(`Czas szukania ścieżki: ${t1-t0} ms`)
     return { path, sides };
 }
 
-async function commit(roundId) {
+async function commit(votingId) {
     try {
-        const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
+        const optionText = document.getElementById(`vote-select-${votingId}`).value.trim();
         if (optionText == '') throw new Error('You have to choose the option!');
         const { path, sides } = await findMerklePath();
         console.log(path);
         console.log(sides);
         const option = ethers.utils.formatBytes32String(optionText);
-        let nullifier = window.poseidon([userSecret, roundId]);
+        let nullifier = window.poseidon([userSecret, votingId]);
         nullifier = window.poseidon.F.toObject(nullifier);
         nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
-        const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
+        const nonce = await contract.nonces(votingId, nullifier);
+        const message = SALT_MESSAGE.replace('{id}', votingId).replace('{nonce}', nonce);
+        const salt = await signer.signMessage(message);
         const hashedSalt = ethers.utils.keccak256(salt);
         const commitmentEncoded = ethers.utils.defaultAbiCoder.encode(
-            ["bytes32", "bytes32", "uint", "bytes32"], [option, nullifier, roundId, hashedSalt]
+            ["bytes32", "bytes32"], [option, hashedSalt]
         )
         const commitmentHashed = ethers.utils.keccak256(commitmentEncoded);
         console.log(commitmentHashed);
         const commitment = BigInt(commitmentHashed) % P;
-        const nonce = await contract.nonces(roundId, nullifier);
+        
         const input = {
             secret: userSecret.toString(),
-            siblings: path,
-            sides: sides,
+            pathElements: path,
+            pathIndicators: sides,
             commitment: commitment,
-            roundId: roundId.toString(),
+            votingId: votingId.toString(),
             nonce: nonce.toString()
         };
         const commitmentHex = ethers.utils.hexZeroPad("0x" + commitment.toString(16), 32);
@@ -495,9 +544,12 @@ async function commit(roundId) {
         console.log("path: ", path);
         console.log("sides: ", sides);
         console.log("commitment: ", commitmentHex);
-        console.log("roundId: ", roundId.toString());
+        console.log("votingId: ", votingId.toString());
         console.log("nonce: ", nonce.toString());
+        const t0 = performance.now()
         const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, "voting.wasm", "voting_final.zkey");
+        const t1 = performance.now()
+        console.log(`Generowanie dowodu: ${t1-t0} ms`)
         console.log("public: ", publicSignals);
         const pA = proof.pi_a.slice(0, 2);
         const pB = [
@@ -507,7 +559,7 @@ async function commit(roundId) {
         const pC = proof.pi_c.slice(0, 2);
 
         console.log("nullifier: ", nullifier);
-        const tx = await contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, roundId.toString(), nonce.toString());
+        const tx = await contract.functions.commit(pA, pB, pC, nullifier, commitmentHex, votingId.toString(), nonce.toString());
         showToast("Transaction sent...", "success");
         const receipt = await tx.wait();
         if (receipt.status === 1)
@@ -521,22 +573,24 @@ async function commit(roundId) {
     }
 }
 
-async function reveal(roundId) {
+async function reveal(votingId) {
     try {
-        const optionText = document.getElementById(`vote-select-${roundId}`).value.trim();
+        const optionText = document.getElementById(`vote-select-${votingId}`).value.trim();
         if (optionText == '') throw new Error('You have to choose the option!');
         const option = ethers.utils.formatBytes32String(optionText);
-        let nullifier = window.poseidon([userSecret, roundId]);
+        let nullifier = window.poseidon([userSecret, votingId]);
         nullifier = window.poseidon.F.toObject(nullifier);
         nullifier = ethers.utils.hexZeroPad("0x" + nullifier.toString(16), 32);
-        const salt = await signer.signMessage(SALT_MESSAGE + roundId.toString());
+        const nonce = await contract.nonces(votingId, nullifier);
+        const message = SALT_MESSAGE.replace('{id}', votingId).replace('{nonce}', nonce-1);
+        const salt = await signer.signMessage(message);
         const hashedSalt = ethers.utils.keccak256(salt);
-        const tx = await contract.functions.reveal(option, nullifier, roundId, hashedSalt);
+        const tx = await contract.functions.reveal(votingId, nullifier, option, hashedSalt);
         showToast("Transaction sent...", "success");
         const receipt = await tx.wait();
         if (receipt.status === 1) {
             showToast("Vote revealed successfully!", "success");
-            refreshRound(roundId);
+            refreshVoting(votingId);
         }
         else
             showToast("Transaction failed!", "Error");
@@ -553,12 +607,12 @@ function showToast(msg, type = 'success') {
     div.className = `toast ${type}`;
     div.innerHTML = `<b>${type === 'success' ? 'Success' : 'Error'}</b><br>${msg}`;
     container.appendChild(div);
-    setTimeout(() => div.remove(), 4000);
+    setTimeout(() => div.remove(), 5000);
 }
 
 function setFilter(filter) {
     filterStatus = filter;
-    renderRounds();
+    renderVotings();
     document.querySelector(".button-filter.active").classList.remove('active');
     document.getElementById(`buttonFilter${filter}`).classList.add('active');
 }

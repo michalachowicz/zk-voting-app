@@ -2,3 +2,10 @@ build/
 node_modules/
 *.bin
 *.txt
+.env
+coverage/
+launch.json
+cache/
+coverage.json
+config.json
+abi.json

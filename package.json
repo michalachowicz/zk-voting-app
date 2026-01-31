@@ -3,6 +3,19 @@
   "type": "module",
   "dependencies": {
     "circomlib": "^2.0.5",
-    "circomlibjs": "^0.1.7"
+    "circomlibjs": "^0.1.7",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.12",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.28.3",
+    "snarkjs": "^0.7.6",
+    "solidity-coverage": "^0.8.17"
+  },
+  "scripts": {
+    "build-circuit": "bash scripts/build.sh",
+    "gen-tree": "bash scripts/generate_merkle_tree.sh",
+    "deploy": "bash scripts/deploy.sh"
   }
 }

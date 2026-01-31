@@ -23,12 +23,17 @@
         <div class="logo">ZK Voting</div>
         <div class="wallet-section">
             <div id="addressBox" class="wallet-address" style="display: none;"></div>
+            <div id="userIdBox" class="userId-box" style="display: none;">
+                <span class="userId-label">ID:</span>
+                <span id="userIdDisplay" class="userId-value"></span>
+                <button onclick="copyUserId()" class="button-copy" title="Copy full ID">Copy ID</button>
+            </div>
             <button id="connectButton" class="button">Connect Wallet</button>
         </div>
     </nav>
 
     <main class="container">
-        <div id="addRoundContainer"></div>
+        <div id="addVotingContainer"></div>
         <h2 class="section-title">Proposals</h2>
         <div id="filterContainer" class="filter-container">
             <button id="buttonFilterAll" class="button-filter active">All</button>
@@ -37,7 +42,7 @@
             <button id="buttonFilterReveal" class="button-filter">Reveal Phase</button>
             <button id="buttonFilterEnded" class="button-filter">Ended</button>
         </div>
-        <div id="roundsContainer"  class="rounds-grid">
+        <div id="votingsContainer"  class="votings-grid">
             <div class="empty-state">
                 <div class="empty-state-icon">⏳</div>
                 <div>Waiting for wallet connection...</div>

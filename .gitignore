@@ -9,3 +9,6 @@ cache/
 coverage.json
 config.json
 abi.json
+voting.sol
+*.zkey
+*.wasm

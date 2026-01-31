@@ -21,7 +21,7 @@ snarkjs wtns calculate \
 
 echo "[2/2] Generating proof..."
 snarkjs groth16 prove \
-  build/${CIRCUIT}_0001.zkey \
+  build/voting_final.zkey \
   build/witness.wtns \
   build/proof.json \
   build/public.json

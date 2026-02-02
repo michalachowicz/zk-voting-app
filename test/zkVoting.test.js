@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 
 async function generateFullProof(inputs) {
     const wasmPath = path.join(__dirname, "../build/merkle_proof_js/merkle_proof.wasm");
-    const zkeyPath = path.join(__dirname, "../build/merkle_proof_0001.zkey");
+    const zkeyPath = path.join(__dirname, "../build/voting_final.zkey");
 
     const { proof, publicSignals } = await snarkjs.groth16.fullProve(
         inputs,

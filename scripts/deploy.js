@@ -1,10 +1,6 @@
 import hre from "hardhat";
 import fs from "fs";
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function main() {
     const networkName = hre.network.name;
     const [deployer] = await hre.ethers.getSigners();

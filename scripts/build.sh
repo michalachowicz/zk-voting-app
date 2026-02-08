@@ -3,18 +3,6 @@
 set -e
 export PATH="$PATH:$(pwd)/node_modules/.bin"
 
-# if [ -z "$1" ]; then
-#     echo "no circut file given!"
-#     echo "Usage: ./scripts/build.sh <circuit_name> <ptau_file>"
-#     exit 1
-# fi
-
-# if [ -z "$2" ]; then
-#     echo "no ptau file given!"
-#     echo "Usage: ./scripts/build.sh <circuit_name> <ptau_file>"
-#     exit 1
-# fi
-
 CIRCUIT=$1
 CIRCUIT=${1:-merkle_proof}
 PTAU=${2:-final}

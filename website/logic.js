@@ -514,7 +514,7 @@ async function commit(votingId) {
             ["bytes32", "bytes32"], [option, hashedSalt]
         )
         const commitmentHashed = ethers.utils.keccak256(commitmentEncoded);
-        const commitment = BigInt(commitmentHashed) % P;
+        const commitment = BigInt(commitmentHashed) >> 3n;
         
         const input = {
             secret: userSecret.toString(),

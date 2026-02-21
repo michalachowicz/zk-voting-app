@@ -36,7 +36,6 @@ contract Voting {
     mapping (uint => mapping(bytes32 => bool)) public isOption;
     mapping (uint => mapping(bytes32 => bytes32)) public commitments;
     mapping (uint => mapping(bytes32 => uint)) public nonces;
-    uint constant P = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
 
     constructor(address _verifier) {
@@ -128,10 +127,10 @@ contract Voting {
             "User has already revealed!");
         require(isOption[_votingId][_option], "Invalid option!");
 
-        // Adjust keccak output to BN254 field (modulo P)
+        // Adjust keccak output to BN254 field
         require(
             uint(commitments[_votingId][_nullifier]) == 
-            uint(keccak256(abi.encode(_option, _salt))) % P, 
+            uint(keccak256(abi.encode(_option, _salt))) >> 3, 
             "Invalid commitment!"
         );
 

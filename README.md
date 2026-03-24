@@ -1,4 +1,67 @@
-# ZK Voting App – Instrukcja uruchomienia
+# ZK-Proof Commit-Reveal Voting System
+
+A fully decentralized, privacy-preserving voting system built with **Zero-Knowledge Proofs (zk-SNARKs)** and a **Commit-Reveal scheme**.
+
+---
+
+## Key Features
+
+- **Full anonymity**
+- **Merkle Tree whitelist** 
+- **Double-voting protection**  
+- **No trusted third party needed**
+- **Censorship resistance**
+- **No visible results during voting**
+
+---
+
+## System Overview
+
+The system combines **zk-SNARKs (Groth16)** with a **two-phase Commit-Reveal protocol**.
+
+### 1. Whitelisting (Off-chain)
+- Eligible voters are stored in a Merkle Tree  
+- Only the **Merkle Root** is published on-chain  
+
+### 2. Commit Phase
+Each voter:
+- Generates a **ZK proof** of membership in the Merkle Tree  
+- Submits:
+  - `commitment` → hash of `(vote + salt)`  
+  - `nullifier` → unique anti-double-vote identifier. It is allowed to change vote during the commit phase. Nullifier ensures that only last vote is counted
+  - ZK proof → proves eligibility without revealing identity  
+
+![Commit Demo](./media/commit.mp4)
+
+### 3. Reveal Phase
+Voter reveals:
+- `vote`
+- `salt`
+
+Smart contract verifies:
+
+    keccak256(vote, salt) == commitment
+
+If valid → vote is counted.
+
+![Revealed](./media/revealed.png)
+
+---
+
+## ⚙️ Tech Stack
+
+| Layer            | Technology |
+|------------------|------------|
+| Smart Contracts  | Solidity, Hardhat |
+| ZK Circuits      | Circom |
+| Proving System   | snarkjs (Groth16) |
+| Frontend         | Vanilla JS, Ethers.js |
+| Network          | Arbitrum |
+
+---
+
+
+# Instrukcja uruchomienia
 
 Ten dokument opisuje **krok po kroku** proces instalacji i uruchomienia aplikacji **zk-voting-app** na systemie Linux (testowane WSL2).
 

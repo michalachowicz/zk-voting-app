@@ -31,7 +31,9 @@ Each voter:
   - `nullifier` → unique anti-double-vote identifier. It is allowed to change vote during the commit phase. Nullifier ensures that only last vote is counted
   - ZK proof → proves eligibility without revealing identity  
 
-![Commit Demo](./media/commit.mp4)
+![Commit Demo](https://github.com/user-attachments/assets/f007104e-127e-4b67-807a-24935109b62b)
+
+
 
 ### 3. Reveal Phase
 Voter reveals:
